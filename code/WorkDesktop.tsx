@@ -306,7 +306,9 @@ function Cat({
                     </defs>
                     {EYES.map((e, i) => (
                         <g key={i} clipPath={`url(#${uid}-e${i})`}>
-                            <g ref={(el) => (pupils.current[i] = el)}>
+                            <g ref={(el) => {
+                                pupils.current[i] = el
+                            }}>
                                 <ellipse cx={e.cx} cy={e.cy} rx={e.pr} ry={e.pry} fill="#0c0c0e" />
                                 <circle cx={e.cx - e.pr * 0.32} cy={e.cy - e.pry * 0.42} r={e.pr * 0.26} fill="#fff" opacity=".95" />
                             </g>
