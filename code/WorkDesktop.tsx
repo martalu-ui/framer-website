@@ -183,8 +183,6 @@ function Cat({ open, half, closed, size }: { open: string; half: string; closed:
                 position: "relative",
                 width: size,
                 height: size,
-                animation: "wd-breathe 4.2s ease-in-out infinite",
-                transformOrigin: "50% 92%",
                 cursor: "default",
             }}
             aria-label="A black cat that blinks now and then"
