@@ -8,7 +8,7 @@ import { addPropertyControls, ControlType, RenderTarget } from "framer"
 // that blinks now and then. Clicking an item opens a window with the whole case study.
 // ============================================================================================
 
-type Kind = "folder" | "file"
+type Kind = "folder" | "file" | "calendar"
 
 interface Project {
     label: string
@@ -32,6 +32,7 @@ interface Project {
     link: any
     folder: string
     cta: string
+    embed: string
 }
 
 interface Extra {
@@ -282,6 +283,17 @@ function FolderIcon({ size, color, tag, tagColor, peek }: { size: number; color:
     )
 }
 
+function CalendarIcon({ size }: { size: number }) {
+    const d = new Date()
+    const month = d.toLocaleString("en-GB", { month: "short" }).toUpperCase()
+    return (
+        <div className="wd-file" style={{ width: size, height: size, borderRadius: size * 0.22, background: "#fff", boxShadow: "0 6px 18px rgba(0,0,0,.10), inset 0 0 0 1px rgba(0,0,0,.05)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+            <div style={{ background: "#E5484D", color: "#fff", font: `700 ${size * 0.16}px/1 ${FONT}`, letterSpacing: ".06em", textAlign: "center", padding: `${size * 0.07}px 0` }}>{month}</div>
+            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", font: `300 ${size * 0.5}px/1 ${FONT}`, color: "#111", letterSpacing: "-0.04em" }}>{d.getDate()}</div>
+        </div>
+    )
+}
+
 function FileIcon({ size, img }: { size: number; img: string }) {
     return (
         <div
@@ -438,8 +450,8 @@ function Window({
                 onClick={(e) => e.stopPropagation()}
                 style={{
                     position: "relative",
-                    width: full ? "100vw" : folder ? "min(760px, 92vw)" : "min(920px, 92vw)",
-                    height: full ? "100dvh" : folder ? "min(64vh, 560px)" : "min(84vh, 820px)",
+                    width: full ? "100vw" : folder ? "min(760px, 92vw)" : p.embed ? "min(1100px, 94vw)" : "min(920px, 92vw)",
+                    height: full ? "100dvh" : folder ? "min(64vh, 560px)" : p.embed ? "min(88vh, 900px)" : "min(84vh, 820px)",
                     background: "#fff",
                     borderRadius: full ? 0 : 22,
                     boxShadow: full ? "none" : "0 0 0 10px rgba(255,255,255,.55), 0 0 0 11px rgba(0,0,0,.05), 0 40px 90px rgba(30,25,20,.22)",
@@ -483,8 +495,16 @@ function Window({
                 </div>
 
                 {/* body */}
-                <div className="wd-scroll" style={{ flex: "1 1 auto", minHeight: 0, overflowY: "auto", padding: isPhone ? "18px 18px 8px" : "22px 32px 8px", overscrollBehavior: "contain" }}>
-                    {folder ? (
+                <div className="wd-scroll" style={{ flex: "1 1 auto", minHeight: 0, overflowY: p.embed && !folder ? "hidden" : "auto", padding: p.embed && !folder ? (isPhone ? 8 : 14) : isPhone ? "18px 18px 8px" : "22px 32px 8px", overscrollBehavior: "contain", display: p.embed && !folder ? "flex" : "block" }}>
+                    {p.embed && !folder ? (
+                        <iframe
+                            src={p.embed}
+                            title={p.label}
+                            loading="lazy"
+                            allow="fullscreen; payment"
+                            style={{ display: "block", width: "100%", height: "100%", minHeight: 480, border: 0, borderRadius: 12, background: "#fff" }}
+                        />
+                    ) : folder ? (
                         <div style={{ display: "grid", gridTemplateColumns: `repeat(auto-fill, minmax(${isPhone ? 120 : 150}px, 1fr))`, gap: isPhone ? 18 : 26, padding: isPhone ? "8px 0 18px" : "18px 0 26px" }}>
                             {folder.items.map((it, i) => {
                                 const th = sized(src(it.thumb) || src(it.cover), 400)
@@ -496,7 +516,9 @@ function Window({
                                         style={{ all: "unset", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 10, textAlign: "center" }}
                                     >
                                         <div style={{ height: isPhone ? 84 : 104, display: "flex", alignItems: "flex-end" }}>
-                                            {it.kind === "folder" ? (
+                                            {it.kind === "calendar" ? (
+                                                <CalendarIcon size={isPhone ? 84 : 104} />
+                                            ) : it.kind === "folder" ? (
                                                 <FolderIcon size={isPhone ? 92 : 112} color={folder.folderColor} tag={it.tag} tagColor={TAG_COLORS[(i + 2) % TAG_COLORS.length]} peek={th || undefined} />
                                             ) : (
                                                 <FileIcon size={isPhone ? 84 : 104} img={th} />
@@ -772,7 +794,7 @@ export default function WorkDesktop(props: Props) {
     }
 
     const clock = now.toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).replace(",", "")
-    const catSize = Math.round(isPhone ? Math.min(w * 0.46, 200) : Math.max(170, Math.min(h * 0.32, w * 0.19, 300)) / 10) * 10
+    const catSize = Math.round((isPhone ? Math.min(w * 0.46, 200) : Math.max(170, Math.min(h * 0.32, w * 0.19, 300))) / 10) * 10
 
     const pill: React.CSSProperties = {
         display: "flex",
@@ -800,7 +822,9 @@ export default function WorkDesktop(props: Props) {
         return (
             <>
                 <div className="wd-icon" style={{ display: "flex", alignItems: "flex-end", justifyContent: "center", height: icon * 0.98 }}>
-                    {kind === "file" && thumb ? (
+                    {kind === "calendar" ? (
+                        <CalendarIcon size={icon * 0.92} />
+                    ) : kind === "file" && thumb ? (
                         <FileIcon size={icon * 0.98} img={thumb} />
                     ) : (
                         <FolderIcon size={icon} color={folderColor} tag={tag} tagColor={tagColor} peek={thumb || undefined} />
@@ -838,7 +862,8 @@ export default function WorkDesktop(props: Props) {
                 height: "100%",
                 minHeight: isPhone ? 760 : 640,
                 background: paper,
-                overflow: "hidden",
+                overflowX: "hidden",
+                overflowY: isPhone ? "auto" : "hidden",
                 fontFamily: FONT,
                 touchAction: isPhone ? "auto" : "none",
             }}
@@ -869,12 +894,12 @@ export default function WorkDesktop(props: Props) {
                         top: "50%",
                         transform: "translateY(-50%)",
                         textAlign: "center",
-                        font: `900 ${isPhone ? w * 0.3 : Math.min(w * 0.24, h * 0.42)}px/0.8 ${FONT}`,
+                        font: `900 ${isPhone ? Math.min(w * 0.3, (w * 0.94) / (0.66 * word.length)) : Math.min(w * 0.24, (w * 0.86) / (0.66 * word.length), h * 0.42)}px/0.8 ${FONT}`,
                         letterSpacing: "-0.06em",
                         color: accent,
                         userSelect: "none",
                         pointerEvents: "none",
-                        marginTop: isPhone ? -h * 0.18 : 0,
+                        marginTop: isPhone ? -h * 0.22 : 0,
                     }}
                 >
                     {word}
@@ -887,7 +912,7 @@ export default function WorkDesktop(props: Props) {
                 style={{
                     position: "absolute",
                     left: "50%",
-                    top: isPhone ? "32%" : "52%",
+                    top: isPhone ? "28%" : "52%",
                     transform: "translate(-50%, -50%)",
                     zIndex: 2,
                 }}
@@ -903,10 +928,11 @@ export default function WorkDesktop(props: Props) {
                         position: "absolute",
                         left: 12,
                         right: 12,
-                        top: "56%",
+                        top: "47%",
                         display: "grid",
                         gridTemplateColumns: "repeat(3, 1fr)",
                         rowGap: 18,
+                        paddingBottom: 36,
                         zIndex: 3,
                     }}
                 >
@@ -1061,7 +1087,7 @@ addPropertyControls(WorkDesktop, {
             type: ControlType.Object,
             controls: {
                 label: { type: ControlType.String, title: "File name" },
-                kind: { type: ControlType.Enum, title: "Icon", options: ["folder", "file"], optionTitles: ["Folder", "File"], defaultValue: "folder" },
+                kind: { type: ControlType.Enum, title: "Icon", options: ["folder", "file", "calendar"], optionTitles: ["Folder", "File", "Calendar"], defaultValue: "folder" },
                 tag: { type: ControlType.String, title: "Tag" },
                 brand: { type: ControlType.String, title: "Brand" },
                 title: { type: ControlType.String, title: "Title" },
@@ -1080,6 +1106,7 @@ addPropertyControls(WorkDesktop, {
                 gallery2: { type: ControlType.ResponsiveImage, title: "Gallery 2" },
                 link: { type: ControlType.Link, title: "Case study" },
                 cta: { type: ControlType.String, title: "Footer text" },
+                embed: { type: ControlType.String, title: "Embed URL", description: "Shows this page inside the window instead of the case study." },
                 folder: { type: ControlType.String, title: "In folder(s)", description: "Folder name(s), comma separated. Empty = on the desktop." },
             },
         },
