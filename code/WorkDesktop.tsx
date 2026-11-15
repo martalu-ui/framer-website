@@ -631,7 +631,7 @@ export default function WorkDesktop(props: Props) {
         const x = f.fx * w - itemW / 2
         let y = f.fy * h - itemH / 2
         if (gravity && fall[k] !== undefined) y = fall[k]
-        return { x: Math.max(4, Math.min(w - itemW - 4, x)), y: Math.max(top + 56, Math.min(h - itemH - 8, y)) }
+        return { x: Math.max(4, Math.min(w - itemW - 4, x)), y: Math.max(top + 8, Math.min(h - itemH - 8, y)) }
     }
 
     // gravity: drop everything to the floor with a little bounce, keep x
@@ -640,7 +640,7 @@ export default function WorkDesktop(props: Props) {
             setFall({})
             return
         }
-        const ground = h - itemH - (isPhone ? 10 : 84)
+        const ground = h - itemH - (isPhone ? 10 : 92)
         // stack items that land on top of each other, like a real pile
         const order = items.map((_, k) => k).sort((a, b) => xy(b).y - xy(a).y)
         const placed: { x: number; top: number }[] = []
@@ -649,7 +649,7 @@ export default function WorkDesktop(props: Props) {
             const x = xy(k).x
             const under = placed.filter((p) => Math.abs(p.x - x) < itemW * 0.72)
             const f = under.length ? Math.min(...under.map((p) => p.top)) - itemH * 0.86 : ground
-            floors[k] = Math.max(top + 56, f)
+            floors[k] = Math.max(top + 8, f)
             placed.push({ x, top: floors[k] })
         })
         const st = items.map((_, k) => ({ y: xy(k).y, vy: 0, floor: floors[k] }))
@@ -717,7 +717,7 @@ export default function WorkDesktop(props: Props) {
     }
 
     const clock = now.toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).replace(",", "")
-    const catSize = isPhone ? Math.min(w * 0.62, 280) : Math.max(240, Math.min(h * 0.5, w * 0.3, 470))
+    const catSize = isPhone ? Math.min(w * 0.46, 200) : Math.max(170, Math.min(h * 0.32, w * 0.19, 300))
 
     const pill: React.CSSProperties = {
         display: "flex",
@@ -839,38 +839,6 @@ export default function WorkDesktop(props: Props) {
                 <Cat open={src(props.catOpen)} half={src(props.catHalf)} closed={src(props.catClosed)} size={catSize} />
             </div>
 
-            {/* toolbar */}
-            <div style={{ position: "absolute", top: top, left: isPhone ? 10 : 16, right: isPhone ? 10 : 16, display: "flex", justifyContent: "space-between", gap: 8, zIndex: 5 }}>
-                <div style={{ ...pill, fontWeight: 600, letterSpacing: ".01em" }}>{title}</div>
-                <div style={{ display: "flex", gap: 8 }}>
-                    <button
-                        onClick={() => setGravity(!gravity)}
-                        aria-pressed={gravity}
-                        style={{ ...pill, border: 0, cursor: "pointer" }}
-                    >
-                        {!isPhone && "Gravity"}
-                        {isPhone && "↓"}
-                        <span style={{ width: 40, height: 24, borderRadius: 99, background: gravity ? accent : "#E3E1DC", position: "relative", transition: "background .2s" }}>
-                            <span style={{ position: "absolute", top: 3, left: gravity ? 19 : 3, width: 18, height: 18, borderRadius: 99, background: "#fff", boxShadow: "0 1px 2px rgba(0,0,0,.2)", transition: "left .2s" }} />
-                        </span>
-                    </button>
-                    {!isPhone && (
-                        <div style={pill}>
-                            <span style={{ width: 8, height: 8, borderRadius: 99, background: accent }} />
-                            {clock}
-                        </div>
-                    )}
-                    {ctaLabel && !isPhone ? (
-                        <a href={src(props.ctaLink) || undefined} style={{ ...pill, background: ink, color: "#fff", textDecoration: "none" }}>
-                            {ctaLabel}
-                            <svg width="15" height="15" viewBox="0 0 16 16">
-                                <path d="M9 2h5v5M14 2 7.5 8.5M12 9.5V13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h3.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                        </a>
-                    ) : null}
-                </div>
-            </div>
-
             {/* items */}
             {isPhone ? (
                 <div
@@ -932,8 +900,8 @@ export default function WorkDesktop(props: Props) {
                 })
             ) : null}
 
-            {/* hint */}
-            {hint && !isPhone ? (
+            {/* bottom bar: hint + gravity */}
+            {!isPhone ? (
                 <div
                     style={{
                         position: "absolute",
@@ -943,19 +911,40 @@ export default function WorkDesktop(props: Props) {
                         background: ink,
                         color: "#fff",
                         borderRadius: 14,
-                        padding: "0 28px",
-                        height: 54,
+                        padding: "0 10px 0 24px",
+                        height: 56,
                         display: "flex",
                         alignItems: "center",
-                        gap: 28,
-                        font: `600 17px/1 ${FONT}`,
+                        gap: 22,
+                        font: `600 16px/1 ${FONT}`,
                         letterSpacing: ".02em",
                         zIndex: 4,
                         whiteSpace: "nowrap",
                     }}
                 >
                     <span style={{ font: `900 22px/1 ${FONT}`, letterSpacing: "-0.04em" }}>M.</span>
-                    <span style={{ textTransform: "uppercase" }}>{hint}</span>
+                    {hint ? <span style={{ textTransform: "uppercase", opacity: 0.92 }}>{hint}</span> : null}
+                    <button
+                        onClick={() => setGravity(!gravity)}
+                        aria-pressed={gravity}
+                        style={{
+                            all: "unset",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                            height: 40,
+                            padding: "0 12px 0 14px",
+                            borderRadius: 10,
+                            background: "rgba(255,255,255,.1)",
+                            font: `500 15px/1 ${FONT}`,
+                        }}
+                    >
+                        Gravity
+                        <span style={{ width: 38, height: 22, borderRadius: 99, background: gravity ? accent : "rgba(255,255,255,.28)", position: "relative", transition: "background .2s" }}>
+                            <span style={{ position: "absolute", top: 3, left: gravity ? 19 : 3, width: 16, height: 16, borderRadius: 99, background: "#fff", transition: "left .2s" }} />
+                        </span>
+                    </button>
                 </div>
             ) : null}
 
