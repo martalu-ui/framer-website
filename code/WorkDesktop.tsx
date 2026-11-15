@@ -772,7 +772,7 @@ export default function WorkDesktop(props: Props) {
     }
 
     const clock = now.toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).replace(",", "")
-    const catSize = isPhone ? Math.min(w * 0.46, 200) : Math.max(170, Math.min(h * 0.32, w * 0.19, 300))
+    const catSize = Math.round(isPhone ? Math.min(w * 0.46, 200) : Math.max(170, Math.min(h * 0.32, w * 0.19, 300)) / 10) * 10
 
     const pill: React.CSSProperties = {
         display: "flex",
@@ -844,7 +844,6 @@ export default function WorkDesktop(props: Props) {
             }}
         >
             <style>{`
-@keyframes wd-breathe { 0%,100% { transform: scale(1) } 50% { transform: scale(1.012, 1.018) } }
 @keyframes wd-in { from { opacity: 0; transform: translate(var(--ox), var(--oy)) scale(.18) } to { opacity: 1; transform: translate(0,0) scale(1) } }
 @keyframes wd-out { to { opacity: 0; transform: scale(.94) } }
 @keyframes wd-pop { from { opacity: 0; transform: translateY(14px) scale(.9) } to { opacity: 1; transform: none } }
@@ -860,7 +859,7 @@ export default function WorkDesktop(props: Props) {
 `}</style>
 
             {/* big word behind the cat */}
-            {showWord && word ? (
+            {w > 0 && showWord && word ? (
                 <div
                     aria-hidden
                     style={{
@@ -883,6 +882,7 @@ export default function WorkDesktop(props: Props) {
             ) : null}
 
             {/* cat */}
+            {w > 0 ? (
             <div
                 style={{
                     position: "absolute",
@@ -894,6 +894,7 @@ export default function WorkDesktop(props: Props) {
             >
                 <Cat open={src(props.catOpen)} half={src(props.catHalf)} closed={src(props.catClosed)} size={catSize} />
             </div>
+            ) : null}
 
             {/* items */}
             {isPhone ? (
