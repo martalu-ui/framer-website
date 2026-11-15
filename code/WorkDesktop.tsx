@@ -78,6 +78,12 @@ const SLOTS: [number, number][] = [
     [0.22, 0.5], [0.78, 0.5],
 ]
 
+const NARROW: [number, number][] = [
+    [0.12, 0.25], [0.88, 0.25], [0.12, 0.45], [0.88, 0.45],
+    [0.12, 0.65], [0.88, 0.65], [0.12, 0.84], [0.88, 0.84],
+    [0.32, 0.86], [0.68, 0.86],
+]
+
 function useNow() {
     const [now, setNow] = useState(() => new Date())
     useEffect(() => {
@@ -617,7 +623,7 @@ export default function WorkDesktop(props: Props) {
     const itemH = icon + 46
 
     const slotOf = (k: number) => {
-        const s = SLOTS[k % SLOTS.length]
+        const s = (w < 1100 ? NARROW : SLOTS)[k % (w < 1100 ? NARROW : SLOTS).length]
         return { fx: s[0], fy: s[1] }
     }
     const xy = (k: number) => {
