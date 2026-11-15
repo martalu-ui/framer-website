@@ -596,15 +596,6 @@ function Window({
                             <P t={p.takeaway} />
                         </Section>
                     ) : null}
-                    {g1 || g2 ? (
-                        <Section title="Gallery" defaultOpen>
-                            <div style={{ display: "grid", gridTemplateColumns: isPhone ? "1fr" : "1fr 1fr", gap: 12 }}>
-                                {[g1, g2].filter(Boolean).map((u, i) => (
-                                    <div key={i} style={{ aspectRatio: "1 / 1", borderRadius: 14, background: `#f2f1ee url("${u}") center/cover no-repeat` }} />
-                                ))}
-                            </div>
-                        </Section>
-                    ) : null}
                     </>
                     )}
                 </div>
