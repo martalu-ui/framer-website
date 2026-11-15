@@ -54,11 +54,17 @@ interface Props {
     paper: string
     ink: string
     folderColor: string
+    topOffset: number
     style?: React.CSSProperties
 }
 
 // ---------- helpers ----------------------------------------------------------------------------
-const src = (v: any): string => (typeof v === "string" ? v : v?.src || v?.url || v?.href || "")
+const src = (v: any): string => {
+    if (!v) return ""
+    if (typeof v === "string") return v
+    if (v.collectionItem && typeof v.href === "string" && v.href.indexOf("/:") >= 0) return v.href.replace(/\/:[^/]+$/, "/" + v.collectionItem)
+    return v.src || v.url || v.href || ""
+}
 const sized = (u: string, w: number) =>
     u && u.indexOf("framerusercontent.com/images/") >= 0 && u.indexOf("?") < 0 ? u + "?scale-down-to=" + w : u
 const TAG_COLORS = ["#FF4FA3", "#2F6BFF", "#FFC21A", "#21C47B", "#FF6A3D", "#9B6BFF"]
@@ -66,10 +72,10 @@ const FONT = `"Inter", "Inter Placeholder", system-ui, -apple-system, sans-serif
 
 // Slots around the centre (fractions of the stage). Left column, right column, then fill.
 const SLOTS: [number, number][] = [
-    [0.1, 0.24], [0.25, 0.17], [0.86, 0.2], [0.72, 0.26],
-    [0.13, 0.55], [0.27, 0.46], [0.88, 0.52], [0.74, 0.6],
-    [0.09, 0.82], [0.3, 0.78], [0.66, 0.84], [0.9, 0.82],
-    [0.42, 0.86], [0.56, 0.16],
+    [0.09, 0.27], [0.23, 0.2], [0.91, 0.27], [0.77, 0.2],
+    [0.08, 0.55], [0.92, 0.55], [0.15, 0.8], [0.85, 0.8],
+    [0.3, 0.84], [0.7, 0.84], [0.37, 0.18], [0.63, 0.18],
+    [0.22, 0.5], [0.78, 0.5],
 ]
 
 function useNow() {
@@ -326,7 +332,7 @@ const P = ({ t }: { t: string }) => (
             .split(/\n\s*\n|\n/)
             .filter((s) => s.trim())
             .map((s, i) => (
-                <p key={i} style={{ margin: "0 0 12px", font: `400 16px/1.6 ${FONT}`, color: "#55524d", textWrap: "pretty" as any }}>
+                <p key={i} style={{ margin: "0 0 12px", font: `400 16px/1.6 ${FONT}`, color: "#55524d" } as any}>
                     {s}
                 </p>
             ))}
@@ -463,12 +469,13 @@ function Window({
                 </div>
 
                 {/* body */}
-                <div className="wd-scroll" style={{ flex: "1 1 auto", overflowY: "auto", padding: isPhone ? "18px 18px 8px" : "22px 32px 8px", overscrollBehavior: "contain" }}>
+                <div className="wd-scroll" style={{ flex: "1 1 auto", minHeight: 0, overflowY: "auto", padding: isPhone ? "18px 18px 8px" : "22px 32px 8px", overscrollBehavior: "contain" }}>
                     {cover ? (
                         <div
                             style={{
                                 width: "100%",
-                                aspectRatio: "16 / 10",
+                                aspectRatio: "16 / 9",
+                                maxHeight: "48vh",
                                 borderRadius: 16,
                                 background: `#f2f1ee url("${cover}") center/cover no-repeat`,
                                 marginBottom: 22,
@@ -479,7 +486,7 @@ function Window({
                         {p.brand}
                         {p.year ? ` · ${p.year}` : ""}
                     </div>
-                    <h2 style={{ margin: "0 0 14px", font: `700 ${isPhone ? 28 : 38}px/1.05 ${FONT}`, letterSpacing: "-0.035em", color: "#111", textWrap: "balance" as any }}>
+                    <h2 style={{ margin: "0 0 14px", font: `700 ${isPhone ? 28 : 38}px/1.05 ${FONT}`, letterSpacing: "-0.035em", color: "#111" } as any}>
                         {p.title}
                     </h2>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 18 }}>
@@ -581,6 +588,7 @@ function Window({
  */
 export default function WorkDesktop(props: Props) {
     const { projects, extras, title, word, showWord, ctaLabel, hint, accent, paper, ink, folderColor, style } = props
+    const top = props.topOffset ?? 16
     const stage = useRef<HTMLDivElement>(null)
     const { w, h } = useSize(stage)
     const isPhone = w > 0 && w < 720
@@ -605,7 +613,7 @@ export default function WorkDesktop(props: Props) {
     const dragRef = useRef<any>(null)
 
     const icon = isPhone ? 64 : Math.max(84, Math.min(122, w * 0.075))
-    const itemW = icon + 60
+    const itemW = icon + 96
     const itemH = icon + 46
 
     const slotOf = (k: number) => {
@@ -617,7 +625,7 @@ export default function WorkDesktop(props: Props) {
         const x = f.fx * w - itemW / 2
         let y = f.fy * h - itemH / 2
         if (gravity && fall[k] !== undefined) y = fall[k]
-        return { x: Math.max(4, Math.min(w - itemW - 4, x)), y: Math.max(64, Math.min(h - itemH - 8, y)) }
+        return { x: Math.max(4, Math.min(w - itemW - 4, x)), y: Math.max(top + 56, Math.min(h - itemH - 8, y)) }
     }
 
     // gravity: drop everything to the floor with a little bounce, keep x
@@ -626,8 +634,19 @@ export default function WorkDesktop(props: Props) {
             setFall({})
             return
         }
-        const floor = h - itemH - (isPhone ? 10 : 70)
-        const st = items.map((_, k) => ({ y: xy(k).y, vy: 0 }))
+        const ground = h - itemH - (isPhone ? 10 : 84)
+        // stack items that land on top of each other, like a real pile
+        const order = items.map((_, k) => k).sort((a, b) => xy(b).y - xy(a).y)
+        const placed: { x: number; top: number }[] = []
+        const floors: number[] = []
+        order.forEach((k) => {
+            const x = xy(k).x
+            const under = placed.filter((p) => Math.abs(p.x - x) < itemW * 0.72)
+            const f = under.length ? Math.min(...under.map((p) => p.top)) - itemH * 0.86 : ground
+            floors[k] = Math.max(top + 56, f)
+            placed.push({ x, top: floors[k] })
+        })
+        const st = items.map((_, k) => ({ y: xy(k).y, vy: 0, floor: floors[k] }))
         let raf = 0
         let last = performance.now()
         const tick = (t: number) => {
@@ -637,12 +656,12 @@ export default function WorkDesktop(props: Props) {
             st.forEach((s) => {
                 s.vy += 2600 * dt
                 s.y += s.vy * dt
-                if (s.y > floor) {
-                    s.y = floor
+                if (s.y > s.floor) {
+                    s.y = s.floor
                     s.vy = -s.vy * 0.38
                     if (Math.abs(s.vy) < 60) s.vy = 0
                 }
-                if (s.vy !== 0 || s.y < floor) moving = true
+                if (s.vy !== 0 || s.y < s.floor) moving = true
             })
             const next: Record<number, number> = {}
             st.forEach((s, k) => (next[k] = s.y))
@@ -734,6 +753,7 @@ export default function WorkDesktop(props: Props) {
                         textAlign: "center",
                         padding: "4px 7px",
                         borderRadius: 6,
+                        background: isPhone ? "transparent" : paper,
                         maxWidth: itemW,
                         overflowWrap: "anywhere",
                     }}
@@ -814,7 +834,7 @@ export default function WorkDesktop(props: Props) {
             </div>
 
             {/* toolbar */}
-            <div style={{ position: "absolute", top: isPhone ? 10 : 16, left: isPhone ? 10 : 16, right: isPhone ? 10 : 16, display: "flex", justifyContent: "space-between", gap: 8, zIndex: 5 }}>
+            <div style={{ position: "absolute", top: top, left: isPhone ? 10 : 16, right: isPhone ? 10 : 16, display: "flex", justifyContent: "space-between", gap: 8, zIndex: 5 }}>
                 <div style={{ ...pill, fontWeight: 600, letterSpacing: ".01em" }}>{title}</div>
                 <div style={{ display: "flex", gap: 8 }}>
                     <button
@@ -834,7 +854,7 @@ export default function WorkDesktop(props: Props) {
                             {clock}
                         </div>
                     )}
-                    {ctaLabel ? (
+                    {ctaLabel && !isPhone ? (
                         <a href={src(props.ctaLink) || undefined} style={{ ...pill, background: ink, color: "#fff", textDecoration: "none" }}>
                             {ctaLabel}
                             <svg width="15" height="15" viewBox="0 0 16 16">
@@ -896,10 +916,11 @@ export default function WorkDesktop(props: Props) {
                                 cursor: "grab",
                                 touchAction: "none",
                                 userSelect: "none",
-                                animation: isCanvas ? "none" : `wd-pop .55s cubic-bezier(.2,.9,.3,1.2) ${0.06 * k}s both`,
                             }}
                         >
-                            {renderItem(k)}
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", animation: isCanvas ? "none" : `wd-pop .55s cubic-bezier(.2,.9,.3,1.2) ${0.06 * k}s both` }}>
+                                {renderItem(k)}
+                            </div>
                         </button>
                     )
                 })
@@ -954,6 +975,7 @@ WorkDesktop.defaultProps = {
     paper: "#ECEBE8",
     ink: "#111111",
     folderColor: "#141414",
+    topOffset: 16,
 }
 
 addPropertyControls(WorkDesktop, {
@@ -1010,4 +1032,5 @@ addPropertyControls(WorkDesktop, {
     paper: { type: ControlType.Color, title: "Background", defaultValue: "#ECEBE8" },
     ink: { type: ControlType.Color, title: "Ink", defaultValue: "#111111" },
     folderColor: { type: ControlType.Color, title: "Folder", defaultValue: "#141414" },
+    topOffset: { type: ControlType.Number, title: "Top offset", defaultValue: 16, min: 0, max: 200, unit: "px" },
 })
