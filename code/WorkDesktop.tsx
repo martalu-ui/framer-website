@@ -30,6 +30,8 @@ interface Project {
     gallery1: any
     gallery2: any
     link: any
+    folder: string
+    cta: string
 }
 
 interface Extra {
@@ -351,13 +353,21 @@ function Window({
     onClose,
     accent,
     isPhone,
+    folder,
+    active = true,
+    zBoost = 0,
 }: {
     p: Project
     origin: { x: number; y: number }
     onClose: () => void
     accent: string
     isPhone: boolean
+    folder?: { items: Project[]; onPick: (i: number, el: HTMLElement) => void; folderColor: string }
+    active?: boolean
+    zBoost?: number
 }) {
+    const activeRef = useRef(active)
+    activeRef.current = active
     const [closing, setClosing] = useState(false)
     const [max, setMax] = useState(false)
     const [drag, setDrag] = useState({ x: 0, y: 0 })
@@ -367,7 +377,7 @@ function Window({
         setTimeout(onClose, 220)
     }
     useEffect(() => {
-        const k = (e: KeyboardEvent) => e.key === "Escape" && close()
+        const k = (e: KeyboardEvent) => e.key === "Escape" && activeRef.current && close()
         window.addEventListener("keydown", k)
         const prev = document.body.style.overflow
         document.body.style.overflow = "hidden"
@@ -411,8 +421,8 @@ function Window({
             style={{
                 position: "fixed",
                 inset: 0,
-                zIndex: 2147483000,
-                background: closing ? "rgba(236,234,230,0)" : "rgba(236,234,230,.55)",
+                zIndex: 2147483000 + zBoost,
+                background: closing || zBoost ? "rgba(236,234,230,0)" : "rgba(236,234,230,.55)",
                 backdropFilter: "blur(3px)",
                 WebkitBackdropFilter: "blur(3px)",
                 transition: "background .22s",
@@ -430,8 +440,8 @@ function Window({
                 onClick={(e) => e.stopPropagation()}
                 style={{
                     position: "relative",
-                    width: full ? "100vw" : "min(920px, 92vw)",
-                    height: full ? "100dvh" : "min(84vh, 820px)",
+                    width: full ? "100vw" : folder ? "min(760px, 92vw)" : "min(920px, 92vw)",
+                    height: full ? "100dvh" : folder ? "min(64vh, 560px)" : "min(84vh, 820px)",
                     background: "#fff",
                     borderRadius: full ? 0 : 22,
                     boxShadow: full ? "none" : "0 0 0 10px rgba(255,255,255,.55), 0 0 0 11px rgba(0,0,0,.05), 0 40px 90px rgba(30,25,20,.22)",
@@ -476,6 +486,32 @@ function Window({
 
                 {/* body */}
                 <div className="wd-scroll" style={{ flex: "1 1 auto", minHeight: 0, overflowY: "auto", padding: isPhone ? "18px 18px 8px" : "22px 32px 8px", overscrollBehavior: "contain" }}>
+                    {folder ? (
+                        <div style={{ display: "grid", gridTemplateColumns: `repeat(auto-fill, minmax(${isPhone ? 120 : 150}px, 1fr))`, gap: isPhone ? 18 : 26, padding: isPhone ? "8px 0 18px" : "18px 0 26px" }}>
+                            {folder.items.map((it, i) => {
+                                const th = sized(src(it.thumb) || src(it.cover), 400)
+                                return (
+                                    <button
+                                        key={i}
+                                        className="wd-item"
+                                        onClick={(e) => folder.onPick(i, e.currentTarget)}
+                                        style={{ all: "unset", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 10, textAlign: "center" }}
+                                    >
+                                        <div style={{ height: isPhone ? 84 : 104, display: "flex", alignItems: "flex-end" }}>
+                                            {it.kind === "folder" ? (
+                                                <FolderIcon size={isPhone ? 92 : 112} color={folder.folderColor} tag={it.tag} tagColor={TAG_COLORS[(i + 2) % TAG_COLORS.length]} peek={th || undefined} />
+                                            ) : (
+                                                <FileIcon size={isPhone ? 84 : 104} img={th} />
+                                            )}
+                                        </div>
+                                        <span className="wd-label" style={{ font: `500 14px/1.2 ${FONT}`, color: "#111", padding: "4px 7px", borderRadius: 6, overflowWrap: "anywhere" }}>{it.label}</span>
+                                        <span style={{ font: `400 13px/1.3 ${FONT}`, color: "#8a867f", marginTop: -6 }}>{[it.brand, it.type].filter(Boolean).join(" · ")}</span>
+                                    </button>
+                                )
+                            })}
+                        </div>
+                    ) : (
+                    <>
                     {cover ? (
                         <div
                             style={{
@@ -549,6 +585,8 @@ function Window({
                             </div>
                         </Section>
                     ) : null}
+                    </>
+                    )}
                 </div>
 
                 {/* footer */}
@@ -564,10 +602,14 @@ function Window({
                         background: "#fff",
                     }}
                 >
-                    <span style={{ font: `500 16px/1.2 ${FONT}`, color: "#111" }}>Read the full case study</span>
-                    {href ? (
+                    <span style={{ font: `500 16px/1.2 ${FONT}`, color: "#111" }}>
+                        {folder ? `${folder.items.length} ${folder.items.length === 1 ? "item" : "items"}` : p.cta || "Read the full case study"}
+                    </span>
+                    {href && !folder ? (
                         <a
                             href={href}
+                            target={/^https?:/.test(href) ? "_blank" : undefined}
+                            rel="noopener"
                             className="wd-cta"
                             style={{ display: "inline-flex", alignItems: "center", gap: 8, font: `500 16px/1 ${FONT}`, color: accent, textDecoration: "none" }}
                         >
@@ -602,13 +644,18 @@ export default function WorkDesktop(props: Props) {
     const now = useNow()
     const [gravity, setGravity] = useState(false)
     const [openIdx, setOpenIdx] = useState<number | null>(null)
+    const [openFolder, setOpenFolder] = useState<number | null>(null)
+    const [folderOrigin, setFolderOrigin] = useState({ x: 0, y: 0 })
     const [origin, setOrigin] = useState({ x: 0, y: 0 })
     const [mounted, setMounted] = useState(false)
     useEffect(() => setMounted(true), [])
 
     type Item = { kind: "project"; i: number } | { kind: "extra"; i: number }
     const items: Item[] = useMemo(
-        () => [...(projects || []).map((_, i) => ({ kind: "project" as const, i })), ...(extras || []).map((_, i) => ({ kind: "extra" as const, i }))],
+        () => [
+            ...(projects || []).map((p, i) => ({ p, i })).filter(({ p }) => !(p.folder || "").trim()).map(({ i }) => ({ kind: "project" as const, i })),
+            ...(extras || []).map((_, i) => ({ kind: "extra" as const, i })),
+        ],
         [projects, extras]
     )
 
@@ -621,6 +668,10 @@ export default function WorkDesktop(props: Props) {
     const icon = isPhone ? 64 : Math.max(84, Math.min(122, w * 0.075))
     const itemW = icon + 96
     const itemH = icon + 46
+
+    const norm = (v: string) => (v || "").toUpperCase().trim()
+    const membersOf = (name: string) =>
+        (projects || []).map((p, i) => ({ p, i })).filter(({ p }) => (p.folder || "").split(",").map(norm).includes(norm(name)))
 
     const slotOf = (k: number) => {
         const s = (w < 1100 ? NARROW : SLOTS)[k % (w < 1100 ? NARROW : SLOTS).length]
@@ -707,6 +758,12 @@ export default function WorkDesktop(props: Props) {
     const activate = (k: number, el: HTMLElement) => {
         const it = items[k]
         if (it.kind === "extra") {
+            if (membersOf(extras[it.i].label).length) {
+                const r = el.getBoundingClientRect()
+                setFolderOrigin({ x: r.left + r.width / 2, y: r.top + r.height / 2 })
+                setOpenFolder(it.i)
+                return
+            }
             const href = src(extras[it.i].link)
             if (href) window.location.href = href
             return
@@ -739,7 +796,8 @@ export default function WorkDesktop(props: Props) {
         const label = pr ? pr.label || `${(pr.brand || "PROJECT").toUpperCase().replace(/\s+/g, "_")}` : ex!.label
         const tag = pr ? pr.tag : ex!.tag
         const tagColor = TAG_COLORS[k % TAG_COLORS.length]
-        const thumb = pr ? sized(src(pr.thumb) || src(pr.cover), 400) : ""
+        const firstMember = ex ? membersOf(ex.label)[0]?.p : null
+        const thumb = pr ? sized(src(pr.thumb) || src(pr.cover), 400) : firstMember ? sized(src(firstMember.thumb) || src(firstMember.cover), 400) : ""
         const kind: Kind = pr ? pr.kind || "folder" : "folder"
         return (
             <>
@@ -948,9 +1006,32 @@ export default function WorkDesktop(props: Props) {
                 </div>
             ) : null}
 
+            {mounted && openFolder !== null && extras[openFolder]
+                ? createPortal(
+                      <Window
+                          p={{ label: extras[openFolder].label } as any}
+                          origin={folderOrigin}
+                          accent={accent}
+                          isPhone={isPhone || (typeof window !== "undefined" && window.innerWidth < 720)}
+                          active={openIdx === null}
+                          folder={{
+                              items: membersOf(extras[openFolder].label).map((m) => m.p),
+                              folderColor,
+                              onPick: (i, el) => {
+                                  const m = membersOf(extras[openFolder].label)[i]
+                                  const r = el.getBoundingClientRect()
+                                  setOrigin({ x: r.left + r.width / 2, y: r.top + r.height / 2 })
+                                  setOpenIdx(m.i)
+                              },
+                          }}
+                          onClose={() => setOpenFolder(null)}
+                      />,
+                      document.body
+                  )
+                : null}
             {mounted && openProject
                 ? createPortal(
-                      <Window p={openProject} origin={origin} accent={accent} isPhone={isPhone || (typeof window !== "undefined" && window.innerWidth < 720)} onClose={() => setOpenIdx(null)} />,
+                      <Window p={openProject} origin={origin} accent={accent} zBoost={openFolder !== null ? 2 : 0} isPhone={isPhone || (typeof window !== "undefined" && window.innerWidth < 720)} onClose={() => setOpenIdx(null)} />,
                       document.body
                   )
                 : null}
@@ -999,6 +1080,8 @@ addPropertyControls(WorkDesktop, {
                 gallery1: { type: ControlType.ResponsiveImage, title: "Gallery 1" },
                 gallery2: { type: ControlType.ResponsiveImage, title: "Gallery 2" },
                 link: { type: ControlType.Link, title: "Case study" },
+                cta: { type: ControlType.String, title: "Footer text" },
+                folder: { type: ControlType.String, title: "In folder(s)", description: "Folder name(s), comma separated. Empty = on the desktop." },
             },
         },
     },
