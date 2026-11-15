@@ -63,6 +63,7 @@ interface Props {
     catNoPupil: any
     catHello: string
     intro: "pop" | "deal"
+    mode: "desktop" | "sweeper"
     style?: React.CSSProperties
 }
 
@@ -133,6 +134,7 @@ function Cat({
     noPupil,
     look,
     say,
+    bubble = "center",
 }: {
     open: string
     half: string
@@ -141,6 +143,7 @@ function Cat({
     noPupil?: string
     look?: { x: number; y: number } | null
     say?: string
+    bubble?: "center" | "right"
 }) {
     const box = useRef<HTMLDivElement>(null)
     const pupils = useRef<(SVGGElement | null)[]>([])
@@ -322,9 +325,10 @@ function Cat({
                     role="status"
                     style={{
                         position: "absolute",
-                        left: "50%",
+                        left: bubble === "right" ? "auto" : "50%",
+                        right: bubble === "right" ? "8%" : "auto",
                         bottom: "96%",
-                        transform: "translateX(-50%)",
+                        transform: bubble === "right" ? "none" : "translateX(-50%)",
                         background: "#fff",
                         color: "#111",
                         borderRadius: 16,
@@ -334,13 +338,13 @@ function Cat({
                         maxWidth: 260,
                         textAlign: "center",
                         boxShadow: "0 8px 24px rgba(0,0,0,.10)",
-                        animation: "wd-say .35s cubic-bezier(.2,.9,.3,1.3) both",
+                        animation: bubble === "right" ? "wd-say-r .35s cubic-bezier(.2,.9,.3,1.3) both" : "wd-say .35s cubic-bezier(.2,.9,.3,1.3) both",
                         pointerEvents: "none",
                         zIndex: 3,
                     }}
                 >
                     {say}
-                    <span style={{ position: "absolute", left: "50%", top: "100%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "8px solid transparent", borderRight: "8px solid transparent", borderTop: "9px solid #fff" }} />
+                    <span style={{ position: "absolute", left: bubble === "right" ? "auto" : "50%", right: bubble === "right" ? "28%" : "auto", top: "100%", transform: bubble === "right" ? "none" : "translateX(-50%)", width: 0, height: 0, borderLeft: "8px solid transparent", borderRight: "8px solid transparent", borderTop: "9px solid #fff" }} />
                 </div>
             ) : null}
         </div>
@@ -759,6 +763,263 @@ function Window({
     )
 }
 
+
+// ---------- minesweeper -----------------------------------------------------------------------
+// Resources hide under the tiles instead of mines. Numbers count the resources around a tile.
+const NUM_COLORS = ["", "#0004FA", "#1F8A3B", "#E5484D", "#0B1A8C", "#8A1C1C", "#0E7C86", "#111", "#777"]
+const bevel = (inset: boolean, d = 3) =>
+    inset
+        ? `inset ${d}px ${d}px 0 #7b7b7b, inset -${d}px -${d}px 0 #fff`
+        : `inset ${d}px ${d}px 0 #fff, inset -${d}px -${d}px 0 #7b7b7b`
+
+function Led({ n }: { n: number }) {
+    const t = String(Math.max(0, Math.min(999, n))).padStart(3, "0")
+    return (
+        <div style={{ background: "#120000", color: "#ff2a1a", font: `700 26px/1 "SF Mono", ui-monospace, Menlo, monospace`, padding: "3px 5px", letterSpacing: "2px", boxShadow: "inset 1px 1px 0 #7b7b7b, inset -1px -1px 0 #fff", textShadow: "0 0 6px rgba(255,40,20,.6)" }}>
+            {t}
+        </div>
+    )
+}
+
+function Sweeper({
+    items,
+    onOpen,
+    cat,
+    isPhone,
+    hello,
+}: {
+    items: Project[]
+    onOpen: (i: number, el: HTMLElement) => void
+    cat: { open: string; half: string; closed: string; noPupil?: string }
+    isPhone: boolean
+    hello: string
+}) {
+    const COLS = isPhone ? 8 : 12
+    const ROWS = isPhone ? 8 : 9
+    const CELL = isPhone ? 34 : 44
+    const n = items.length
+    type Cell = { res: number; adj: number; open: boolean; flag: boolean }
+    const build = (): Cell[] => {
+        const cells: Cell[] = Array.from({ length: COLS * ROWS }, () => ({ res: -1, adj: 0, open: false, flag: false }))
+        const spots = new Set<number>()
+        while (spots.size < Math.min(n, cells.length)) spots.add(Math.floor(Math.random() * cells.length))
+        ;[...spots].forEach((p, i) => (cells[p].res = i))
+        cells.forEach((c, p) => {
+            const x = p % COLS, y = Math.floor(p / COLS)
+            for (let dy = -1; dy <= 1; dy++)
+                for (let dx = -1; dx <= 1; dx++) {
+                    const xx = x + dx, yy = y + dy
+                    if ((dx || dy) && xx >= 0 && yy >= 0 && xx < COLS && yy < ROWS && cells[yy * COLS + xx].res >= 0) c.adj++
+                }
+        })
+        return cells
+    }
+    const [cells, setCells] = useState<Cell[]>(build)
+    const [found, setFound] = useState<number[]>([])
+    const [say, setSay] = useState(hello)
+    const [press, setPress] = useState(false)
+    const [look, setLook] = useState<{ x: number; y: number } | null>(null)
+    const sayTimer = useRef<any>(null)
+    useEffect(() => setCells(build()), [COLS, ROWS, n])
+    const talk = (t: string, ms = 3600) => {
+        setSay(t)
+        clearTimeout(sayTimer.current)
+        sayTimer.current = setTimeout(() => setSay(""), ms)
+    }
+    useEffect(() => {
+        sayTimer.current = setTimeout(() => setSay(""), 5200)
+        return () => clearTimeout(sayTimer.current)
+    }, [])
+
+    const reveal = (p: number, el: HTMLElement) => {
+        const c = cells[p]
+        if (c.open || c.flag) return
+        const next = cells.map((x) => ({ ...x }))
+        if (c.res >= 0) {
+            next[p].open = true
+            setCells(next)
+            const nf = found.includes(c.res) ? found : [...found, c.res]
+            setFound(nf)
+            const it = items[c.res]
+            talk(nf.length === n ? "You found them all! Here's the last one." : it.say || `You found ${it.label}!`)
+            setTimeout(() => onOpen(c.res, el), 650)
+            return
+        }
+        // flood fill empty areas, like the original
+        const stack = [p]
+        while (stack.length) {
+            const q = stack.pop()!
+            if (next[q].open) continue
+            next[q].open = true
+            next[q].flag = false
+            if (next[q].adj === 0) {
+                const x = q % COLS, y = Math.floor(q / COLS)
+                for (let dy = -1; dy <= 1; dy++)
+                    for (let dx = -1; dx <= 1; dx++) {
+                        const xx = x + dx, yy = y + dy
+                        if (xx >= 0 && yy >= 0 && xx < COLS && yy < ROWS) {
+                            const r = yy * COLS + xx
+                            if (!next[r].open && next[r].res < 0) stack.push(r)
+                        }
+                    }
+            }
+        }
+        setCells(next)
+        if (c.adj > 0 && Math.random() < 0.5) talk(c.adj === 1 ? "Warm… there's one right next to it." : `Ooh, ${c.adj} of them around here.`, 2400)
+    }
+    const flag = (p: number) => {
+        if (cells[p].open) return
+        setCells(cells.map((x, i) => (i === p ? { ...x, flag: !x.flag } : x)))
+    }
+    const reset = () => {
+        setCells(build())
+        setFound([])
+        talk("New board! The resources moved.", 2600)
+    }
+    const showAll = () => {
+        setCells(cells.map((x) => (x.res >= 0 ? { ...x, open: true, flag: false } : x)))
+        setFound(items.map((_, i) => i))
+        talk("Cheater! Fine, here they are.", 3000)
+    }
+
+    const boardW = COLS * CELL
+    const catSize = isPhone ? 120 : 150
+    const faceBg = (u: string): React.CSSProperties => ({
+        backgroundImage: `url("${u}")`,
+        backgroundSize: `${(30 * 1000) / 330}px`,
+        backgroundPosition: `${-(200 * 30) / 330}px ${-(160 * 30) / 330}px`,
+        backgroundRepeat: "no-repeat",
+    })
+
+    return (
+        <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center" }}>
+            {/* the cat sits on top of the window */}
+            <div style={{ position: "absolute", right: isPhone ? -6 : -28, top: -catSize * 0.83, zIndex: 3 }}>
+                <Cat open={cat.open} half={cat.half} closed={cat.closed} noPupil={cat.noPupil} size={catSize} look={look} say={say} bubble="right" />
+            </div>
+            <div
+                style={{
+                    background: "#c0c0c0",
+                    padding: 6,
+                    boxShadow: `${bevel(false)}, 0 30px 70px rgba(30,25,20,.22)`,
+                    borderRadius: 4,
+                    userSelect: "none",
+                    position: "relative",
+                    zIndex: 2,
+                }}
+            >
+                {/* title bar */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: 30, padding: "0 6px 0 8px", marginBottom: 6, background: "linear-gradient(90deg, #0004FA, #4d6bff)", color: "#fff", font: `700 14px/1 ${FONT}`, letterSpacing: ".02em" }}>
+                    <span>RESOURCES.exe</span>
+                    <span style={{ width: 20, height: 18, background: "#c0c0c0", boxShadow: bevel(false, 2), color: "#111", display: "flex", alignItems: "center", justifyContent: "center", font: `700 12px/1 ${FONT}` }}>×</span>
+                </div>
+                {/* scoreboard */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: 6, marginBottom: 6, boxShadow: bevel(true, 2) }}>
+                    <Led n={n - found.length} />
+                    <button
+                        onClick={reset}
+                        onPointerDown={() => setPress(true)}
+                        onPointerUp={() => setPress(false)}
+                        onPointerLeave={() => setPress(false)}
+                        aria-label="New board"
+                        title="New board"
+                        style={{ all: "unset", cursor: "pointer", width: 38, height: 38, background: "#c0c0c0", boxShadow: bevel(press, 3), display: "flex", alignItems: "center", justifyContent: "center" }}
+                    >
+                        <span style={{ width: 30, height: 30, ...faceBg(found.length === n ? cat.closed : press ? cat.half : cat.open) }} />
+                    </button>
+                    <Led n={found.length} />
+                </div>
+                {/* board */}
+                <div
+                    onPointerLeave={() => setLook(null)}
+                    style={{ display: "grid", gridTemplateColumns: `repeat(${COLS}, ${CELL}px)`, width: boardW, boxShadow: bevel(true, 3), padding: 3 }}
+                >
+                    {cells.map((c, p) => {
+                        const it = c.res >= 0 ? items[c.res] : null
+                        const th = it ? sized(src(it.thumb) || src(it.cover), 160) : ""
+                        return (
+                            <button
+                                key={p}
+                                aria-label={c.open ? (it ? it.label : c.adj ? `${c.adj} nearby` : "empty") : "hidden tile"}
+                                onClick={(e) => (c.open && it ? onOpen(c.res, e.currentTarget) : reveal(p, e.currentTarget))}
+                                onContextMenu={(e) => {
+                                    e.preventDefault()
+                                    flag(p)
+                                }}
+                                onPointerEnter={(e) => {
+                                    const r = e.currentTarget.getBoundingClientRect()
+                                    setLook({ x: r.left + r.width / 2, y: r.top + r.height / 2 })
+                                }}
+                                style={{
+                                    all: "unset",
+                                    boxSizing: "border-box",
+                                    width: CELL,
+                                    height: CELL,
+                                    cursor: c.open && !it ? "default" : "pointer",
+                                    background: c.open ? (it ? "#fff" : "#bdbdbd") : "#c0c0c0",
+                                    boxShadow: c.open ? "inset 1px 1px 0 #8d8d8d" : bevel(false, 3),
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    font: `800 ${CELL * 0.5}px/1 ${FONT}`,
+                                    color: NUM_COLORS[c.adj],
+                                }}
+                            >
+                                {c.open ? (
+                                    it ? (
+                                        it.kind === "calendar" ? (
+                                            <CalendarIcon size={CELL - 8} />
+                                        ) : (
+                                            <span style={{ width: CELL - 8, height: CELL - 8, borderRadius: 5, background: `#fff url("${th}") center/cover`, boxShadow: "0 0 0 1px rgba(0,0,0,.12)", animation: "wd-say .35s cubic-bezier(.2,.9,.3,1.4) both" }} />
+                                        )
+                                    ) : c.adj ? (
+                                        c.adj
+                                    ) : null
+                                ) : c.flag ? (
+                                    <span style={{ fontSize: CELL * 0.5 }}>🐾</span>
+                                ) : null}
+                            </button>
+                        )
+                    })}
+                </div>
+            </div>
+            {/* found tray */}
+            <div style={{ marginTop: 18, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", justifyContent: "center", font: `500 14px/1.3 ${FONT}`, color: "#55524d", maxWidth: boardW + 40, position: "relative", zIndex: 2 }}>
+                {found.length === 0 ? (
+                    <span>
+                        {n} resources are hiding under the tiles. Right-click to mark with a paw.{" "}
+                        <button onClick={showAll} style={{ all: "unset", cursor: "pointer", textDecoration: "underline", color: "#111" }}>
+                            Show me
+                        </button>
+                    </span>
+                ) : (
+                    items.map((it, i) =>
+                        found.includes(i) ? (
+                            <button
+                                key={i}
+                                onClick={(e) => onOpen(i, e.currentTarget)}
+                                className="wd-chip"
+                                style={{ all: "unset", cursor: "pointer", background: "#fff", borderRadius: 99, padding: "8px 12px", font: `500 14px/1 ${FONT}`, color: "#111", boxShadow: "0 1px 2px rgba(0,0,0,.08)" }}
+                            >
+                                {it.label} ↗
+                            </button>
+                        ) : (
+                            <span key={i} style={{ background: "rgba(0,0,0,.06)", borderRadius: 99, padding: "8px 12px", font: `500 14px/1 ${FONT}`, color: "#8a867f" }}>
+                                ???
+                            </span>
+                        )
+                    )
+                )}
+                {found.length > 0 && found.length < n ? (
+                    <button onClick={showAll} style={{ all: "unset", cursor: "pointer", textDecoration: "underline", color: "#111" }}>
+                        Show the rest
+                    </button>
+                ) : null}
+            </div>
+        </div>
+    )
+}
+
 // ---------- main ------------------------------------------------------------------------------
 /**
  * Work Desktop — projects as draggable folders and files around a blinking cat.
@@ -1009,6 +1270,7 @@ export default function WorkDesktop(props: Props) {
             <style>{`
 @keyframes wd-in { from { opacity: 0; transform: translate(var(--ox), var(--oy)) scale(.18) } to { opacity: 1; transform: translate(0,0) scale(1) } }
 @keyframes wd-say { from { opacity: 0; transform: translate(-50%, 8px) scale(.85) } to { opacity: 1; transform: translate(-50%, 0) scale(1) } }
+@keyframes wd-say-r { from { opacity: 0; transform: translateY(8px) scale(.85) } to { opacity: 1; transform: none } }
 @keyframes wd-out { to { opacity: 0; transform: scale(.94) } }
 @keyframes wd-pop { from { opacity: 0; transform: translateY(14px) scale(.9) } to { opacity: 1; transform: none } }
 .wd-item:hover .wd-label, .wd-item:focus-visible .wd-label { background: ${accent}; color: #fff !important; }
@@ -1017,6 +1279,7 @@ export default function WorkDesktop(props: Props) {
 .wd-file { transition: transform .3s cubic-bezier(.2,.8,.2,1); }
 .wd-item:focus-visible { outline: none; }
 .wd-dot:hover { filter: brightness(.92); }
+.wd-chip:hover { background: #111 !important; color: #fff !important; }
 .wd-cta:hover { text-decoration: underline !important; }
 .wd-scroll::-webkit-scrollbar { width: 8px } .wd-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,.12); border-radius: 8px }
 @media (prefers-reduced-motion: reduce) { .wd-item, .wd-peek, .wd-file { transition: none !important } }
@@ -1036,6 +1299,7 @@ export default function WorkDesktop(props: Props) {
                         font: `900 ${isPhone ? Math.min(w * 0.3, (w * 0.94) / (0.66 * word.length)) : Math.min(w * 0.24, (w * 0.86) / (0.66 * word.length), h * 0.42)}px/0.8 ${FONT}`,
                         letterSpacing: "-0.06em",
                         color: accent,
+                        opacity: props.mode === "sweeper" ? 0.1 : 1,
                         userSelect: "none",
                         pointerEvents: "none",
                         marginTop: isPhone ? -h * 0.22 : 0,
@@ -1045,8 +1309,25 @@ export default function WorkDesktop(props: Props) {
                 </div>
             ) : null}
 
+            {/* minesweeper mode */}
+            {w > 0 && props.mode === "sweeper" ? (
+                <div style={{ position: "absolute", left: "50%", top: isPhone ? "56%" : "55%", transform: "translate(-50%, -50%)", zIndex: 3 }}>
+                    <Sweeper
+                        items={projects || []}
+                        isPhone={isPhone}
+                        hello={props.catHello}
+                        cat={{ open: src(props.catOpen), half: src(props.catHalf), closed: src(props.catClosed), noPupil: src(props.catNoPupil) || undefined }}
+                        onOpen={(i, el) => {
+                            const r = el.getBoundingClientRect()
+                            setOrigin({ x: r.left + r.width / 2, y: r.top + r.height / 2 })
+                            setOpenIdx(i)
+                        }}
+                    />
+                </div>
+            ) : null}
+
             {/* cat */}
-            {w > 0 ? (
+            {w > 0 && props.mode !== "sweeper" ? (
             <div
                 style={{
                     position: "absolute",
@@ -1061,7 +1342,7 @@ export default function WorkDesktop(props: Props) {
             ) : null}
 
             {/* items */}
-            {isPhone ? (
+            {props.mode === "sweeper" ? null : isPhone ? (
                 <div
                     style={{
                         position: "absolute",
@@ -1145,7 +1426,7 @@ export default function WorkDesktop(props: Props) {
             ) : null}
 
             {/* bottom bar: hint + gravity */}
-            {!isPhone ? (
+            {!isPhone && props.mode !== "sweeper" ? (
                 <div
                     style={{
                         position: "absolute",
@@ -1240,6 +1521,7 @@ WorkDesktop.defaultProps = {
     topOffset: 16,
     catHello: "",
     intro: "pop" as const,
+    mode: "desktop" as const,
 }
 
 addPropertyControls(WorkDesktop, {
@@ -1303,6 +1585,7 @@ addPropertyControls(WorkDesktop, {
     folderColor: { type: ControlType.Color, title: "Folder", defaultValue: "#141414" },
     catNoPupil: { type: ControlType.ResponsiveImage, title: "Cat · no pupils", description: "Optional: makes the cat follow the cursor with its eyes." },
     catHello: { type: ControlType.String, title: "Cat greeting" },
+    mode: { type: ControlType.Enum, title: "Mode", options: ["desktop", "sweeper"], optionTitles: ["Desktop", "Minesweeper"], defaultValue: "desktop" },
     intro: { type: ControlType.Enum, title: "Intro", options: ["pop", "deal"], optionTitles: ["Pop in", "Cat deals the files"], defaultValue: "pop" },
     topOffset: { type: ControlType.Number, title: "Top offset", defaultValue: 16, min: 0, max: 200, unit: "px" },
 })
