@@ -33,12 +33,14 @@ interface Project {
     folder: string
     cta: string
     embed: string
+    say: string
 }
 
 interface Extra {
     label: string
     tag: string
     link: any
+    say: string
 }
 
 interface Props {
@@ -58,6 +60,9 @@ interface Props {
     ink: string
     folderColor: string
     topOffset: number
+    catNoPupil: any
+    catHello: string
+    intro: "pop" | "deal"
     style?: React.CSSProperties
 }
 
@@ -114,7 +119,74 @@ function useSize(ref: React.RefObject<HTMLElement>) {
 }
 
 // ---------- the cat ---------------------------------------------------------------------------
-function Cat({ open, half, closed, size }: { open: string; half: string; closed: string; size: number }) {
+// Eye geometry measured on the 1000px source illustration
+const EYES = [
+    { cx: 231.3, cy: 342.8, rx: 32.5, ry: 43, pr: 21.5, pry: 29, mx: 12, my: 15 },
+    { cx: 387.7, cy: 362.1, rx: 45.5, ry: 44, pr: 27, pry: 30, mx: 19, my: 14 },
+]
+
+function Cat({
+    open,
+    half,
+    closed,
+    size,
+    noPupil,
+    look,
+    say,
+}: {
+    open: string
+    half: string
+    closed: string
+    size: number
+    noPupil?: string
+    look?: { x: number; y: number } | null
+    say?: string
+}) {
+    const box = useRef<HTMLDivElement>(null)
+    const pupils = useRef<(SVGGElement | null)[]>([])
+    const lookRef = useRef(look)
+    lookRef.current = look
+    const tracking = !!noPupil
+
+    // pupils follow the pointer (or whatever the page asks the cat to look at)
+    useEffect(() => {
+        if (!tracking || RenderTarget.current() === RenderTarget.canvas) return
+        let mouse: { x: number; y: number } | null = null
+        const onMove = (e: PointerEvent) => (mouse = { x: e.clientX, y: e.clientY })
+        window.addEventListener("pointermove", onMove)
+        let cur = { x: 0, y: 0 }
+        let raf = 0
+        const tick = () => {
+            const el = box.current
+            if (el) {
+                const r = el.getBoundingClientRect()
+                const t = lookRef.current || mouse
+                let tx = 0, ty = 0
+                if (t) {
+                    const dx = t.x - (r.left + r.width * 0.31)
+                    const dy = t.y - (r.top + r.height * 0.35)
+                    const d = Math.hypot(dx, dy) || 1
+                    const k = Math.min(1, d / (r.width * 1.2))
+                    tx = (dx / d) * k
+                    ty = (dy / d) * k
+                }
+                cur.x += (tx - cur.x) * 0.14
+                cur.y += (ty - cur.y) * 0.14
+                pupils.current.forEach((g, i) => {
+                    if (!g) return
+                    const e = EYES[i]
+                    g.setAttribute("transform", `translate(${(cur.x * e.mx).toFixed(2)} ${(cur.y * e.my).toFixed(2)})`)
+                })
+            }
+            raf = requestAnimationFrame(tick)
+        }
+        raf = requestAnimationFrame(tick)
+        return () => {
+            cancelAnimationFrame(raf)
+            window.removeEventListener("pointermove", onMove)
+        }
+    }, [tracking])
+
     const [frame, setFrame] = useState(0) // 0 open, 1 half, 2 closed
     const hover = useRef(false)
     const timer = useRef<any>(null)
@@ -165,9 +237,11 @@ function Cat({ open, half, closed, size }: { open: string; half: string; closed:
         }
     }, [])
 
-    const imgs = [open, half || open, closed || open]
+    const imgs = [tracking ? noPupil! : open, half || open, closed || open]
+    const uid = useMemo(() => "cat" + Math.random().toString(36).slice(2, 8), [])
     return (
         <div
+            ref={box}
             onPointerEnter={() => {
                 hover.current = true
                 clearTimeout(timer.current)
@@ -221,6 +295,52 @@ function Cat({ open, half, closed, size }: { open: string; half: string; closed:
                     />
                 ) : null
             )}
+            {tracking ? (
+                <svg viewBox="0 0 1000 1000" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", opacity: frame === 0 ? 1 : 0 }}>
+                    <defs>
+                        {EYES.map((e, i) => (
+                            <clipPath key={i} id={`${uid}-e${i}`}>
+                                <ellipse cx={e.cx} cy={e.cy} rx={e.rx - 1} ry={e.ry - 1} />
+                            </clipPath>
+                        ))}
+                    </defs>
+                    {EYES.map((e, i) => (
+                        <g key={i} clipPath={`url(#${uid}-e${i})`}>
+                            <g ref={(el) => (pupils.current[i] = el)}>
+                                <ellipse cx={e.cx} cy={e.cy} rx={e.pr} ry={e.pry} fill="#0c0c0e" />
+                                <circle cx={e.cx - e.pr * 0.32} cy={e.cy - e.pry * 0.42} r={e.pr * 0.26} fill="#fff" opacity=".95" />
+                            </g>
+                        </g>
+                    ))}
+                </svg>
+            ) : null}
+            {say ? (
+                <div
+                    key={say}
+                    role="status"
+                    style={{
+                        position: "absolute",
+                        left: "50%",
+                        bottom: "96%",
+                        transform: "translateX(-50%)",
+                        background: "#fff",
+                        color: "#111",
+                        borderRadius: 16,
+                        padding: "10px 14px",
+                        font: `500 15px/1.3 ${FONT}`,
+                        width: "max-content",
+                        maxWidth: 260,
+                        textAlign: "center",
+                        boxShadow: "0 8px 24px rgba(0,0,0,.10)",
+                        animation: "wd-say .35s cubic-bezier(.2,.9,.3,1.3) both",
+                        pointerEvents: "none",
+                        zIndex: 3,
+                    }}
+                >
+                    {say}
+                    <span style={{ position: "absolute", left: "50%", top: "100%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "8px solid transparent", borderRight: "8px solid transparent", borderTop: "9px solid #fff" }} />
+                </div>
+            ) : null}
         </div>
     )
 }
@@ -656,6 +776,25 @@ export default function WorkDesktop(props: Props) {
     const [gravity, setGravity] = useState(false)
     const [openIdx, setOpenIdx] = useState<number | null>(null)
     const [openFolder, setOpenFolder] = useState<number | null>(null)
+    const [hoverK, setHoverK] = useState<number | null>(null)
+    const [lookAt, setLookAt] = useState<{ x: number; y: number } | null>(null)
+    const [hello, setHello] = useState(true)
+    useEffect(() => {
+        const t = setTimeout(() => setHello(false), 4200)
+        return () => clearTimeout(t)
+    }, [])
+    const deal = props.intro === "deal" && !isCanvas
+    const [dealt, setDealt] = useState(!deal)
+    const [dealDone, setDealDone] = useState(!deal)
+    useEffect(() => {
+        if (!deal) return
+        const a = setTimeout(() => setDealt(true), 450)
+        const b = setTimeout(() => setDealDone(true), 2600)
+        return () => {
+            clearTimeout(a)
+            clearTimeout(b)
+        }
+    }, [])
     const [folderOrigin, setFolderOrigin] = useState({ x: 0, y: 0 })
     const [origin, setOrigin] = useState({ x: 0, y: 0 })
     const [mounted, setMounted] = useState(false)
@@ -842,6 +981,12 @@ export default function WorkDesktop(props: Props) {
     }
 
     const openProject = openIdx !== null ? projects[openIdx] : null
+    const sayFor = (k: number) => {
+        const it = items[k]
+        if (!it) return ""
+        return it.kind === "project" ? projects[it.i].say || "" : extras[it.i].say || ""
+    }
+    const catSay = hoverK !== null && sayFor(hoverK) ? sayFor(hoverK) : hello && dealDone && props.catHello ? props.catHello : ""
 
     return (
         <div
@@ -861,6 +1006,7 @@ export default function WorkDesktop(props: Props) {
         >
             <style>{`
 @keyframes wd-in { from { opacity: 0; transform: translate(var(--ox), var(--oy)) scale(.18) } to { opacity: 1; transform: translate(0,0) scale(1) } }
+@keyframes wd-say { from { opacity: 0; transform: translate(-50%, 8px) scale(.85) } to { opacity: 1; transform: translate(-50%, 0) scale(1) } }
 @keyframes wd-out { to { opacity: 0; transform: scale(.94) } }
 @keyframes wd-pop { from { opacity: 0; transform: translateY(14px) scale(.9) } to { opacity: 1; transform: none } }
 .wd-item:hover .wd-label, .wd-item:focus-visible .wd-label { background: ${accent}; color: #fff !important; }
@@ -908,7 +1054,7 @@ export default function WorkDesktop(props: Props) {
                     zIndex: 2,
                 }}
             >
-                <Cat open={src(props.catOpen)} half={src(props.catHalf)} closed={src(props.catClosed)} size={catSize} />
+                <Cat open={src(props.catOpen)} half={src(props.catHalf)} closed={src(props.catClosed)} size={catSize} noPupil={src(props.catNoPupil) || undefined} look={lookAt} say={catSay} />
             </div>
             ) : null}
 
@@ -949,6 +1095,24 @@ export default function WorkDesktop(props: Props) {
                             onPointerDown={onDown(k)}
                             onPointerMove={onMove}
                             onPointerUp={onUp(k)}
+                            onPointerEnter={(e) => {
+                                const r = e.currentTarget.getBoundingClientRect()
+                                setHoverK(k)
+                                setLookAt({ x: r.left + r.width / 2, y: r.top + r.height * 0.35 })
+                            }}
+                            onPointerLeave={() => {
+                                setHoverK(null)
+                                setLookAt(null)
+                            }}
+                            onFocus={(e) => {
+                                const r = e.currentTarget.getBoundingClientRect()
+                                setHoverK(k)
+                                setLookAt({ x: r.left + r.width / 2, y: r.top + r.height * 0.35 })
+                            }}
+                            onBlur={() => {
+                                setHoverK(null)
+                                setLookAt(null)
+                            }}
                             onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && activate(k, e.currentTarget)}
                             style={{
                                 all: "unset",
@@ -959,14 +1123,18 @@ export default function WorkDesktop(props: Props) {
                                 display: "flex",
                                 flexDirection: "column",
                                 alignItems: "center",
-                                transform: `translate(${p.x}px, ${p.y}px)`,
+                                transform: dealt
+                                    ? `translate(${p.x}px, ${p.y}px)`
+                                    : `translate(${w / 2 - itemW / 2}px, ${h * 0.52 - itemH / 2}px) scale(.15)`,
+                                opacity: dealt ? 1 : 0,
+                                transition: dealDone ? "none" : `transform .95s cubic-bezier(.2,.95,.25,1.12) ${0.1 * k}s, opacity .25s ${0.1 * k}s`,
                                 zIndex: 3 + (zi < 0 ? 0 : zi + 1),
                                 cursor: "grab",
                                 touchAction: "none",
                                 userSelect: "none",
                             }}
                         >
-                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", animation: isCanvas ? "none" : `wd-pop .55s cubic-bezier(.2,.9,.3,1.2) ${0.06 * k}s both` }}>
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", animation: isCanvas || deal ? "none" : `wd-pop .55s cubic-bezier(.2,.9,.3,1.2) ${0.06 * k}s both` }}>
                                 {renderItem(k)}
                             </div>
                         </button>
@@ -1068,6 +1236,8 @@ WorkDesktop.defaultProps = {
     ink: "#111111",
     folderColor: "#141414",
     topOffset: 16,
+    catHello: "",
+    intro: "pop" as const,
 }
 
 addPropertyControls(WorkDesktop, {
@@ -1098,6 +1268,7 @@ addPropertyControls(WorkDesktop, {
                 link: { type: ControlType.Link, title: "Case study" },
                 cta: { type: ControlType.String, title: "Footer text" },
                 embed: { type: ControlType.String, title: "Embed URL", description: "Shows this page inside the window instead of the case study." },
+                say: { type: ControlType.String, title: "Cat says" },
                 folder: { type: ControlType.String, title: "In folder(s)", description: "Folder name(s), comma separated. Empty = on the desktop." },
             },
         },
@@ -1111,6 +1282,7 @@ addPropertyControls(WorkDesktop, {
                 label: { type: ControlType.String, title: "Name" },
                 tag: { type: ControlType.String, title: "Tag" },
                 link: { type: ControlType.Link, title: "Link" },
+                say: { type: ControlType.String, title: "Cat says" },
             },
         },
     },
@@ -1127,5 +1299,8 @@ addPropertyControls(WorkDesktop, {
     paper: { type: ControlType.Color, title: "Background", defaultValue: "#ECEBE8" },
     ink: { type: ControlType.Color, title: "Ink", defaultValue: "#111111" },
     folderColor: { type: ControlType.Color, title: "Folder", defaultValue: "#141414" },
+    catNoPupil: { type: ControlType.ResponsiveImage, title: "Cat · no pupils", description: "Optional: makes the cat follow the cursor with its eyes." },
+    catHello: { type: ControlType.String, title: "Cat greeting" },
+    intro: { type: ControlType.Enum, title: "Intro", options: ["pop", "deal"], optionTitles: ["Pop in", "Cat deals the files"], defaultValue: "pop" },
     topOffset: { type: ControlType.Number, title: "Top offset", defaultValue: 16, min: 0, max: 200, unit: "px" },
 })
