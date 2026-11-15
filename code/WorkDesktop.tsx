@@ -787,7 +787,9 @@ function Sweeper({
     cat,
     isPhone,
     hello,
+    maxCell = 44,
 }: {
+    maxCell?: number
     items: Project[]
     onOpen: (i: number, el: HTMLElement) => void
     cat: { open: string; half: string; closed: string; noPupil?: string }
@@ -796,7 +798,7 @@ function Sweeper({
 }) {
     const COLS = isPhone ? 8 : 12
     const ROWS = isPhone ? 8 : 9
-    const CELL = isPhone ? 34 : 44
+    const CELL = isPhone ? 34 : Math.round(maxCell)
     const n = items.length
     type Cell = { res: number; adj: number; open: boolean; flag: boolean }
     const build = (): Cell[] => {
@@ -1311,8 +1313,9 @@ export default function WorkDesktop(props: Props) {
 
             {/* minesweeper mode */}
             {w > 0 && props.mode === "sweeper" ? (
-                <div style={{ position: "absolute", left: "50%", top: isPhone ? "56%" : "55%", transform: "translate(-50%, -50%)", zIndex: 3 }}>
+                <div style={{ position: "absolute", left: "50%", top: isPhone ? "56%" : top + 170 + (h - top - 170) / 2 - 20, transform: "translate(-50%, -50%)", zIndex: 3 }}>
                     <Sweeper
+                        maxCell={Math.max(30, Math.min(46, (h - top - 170 - 110 - 70) / 9))}
                         items={projects || []}
                         isPhone={isPhone}
                         hello={props.catHello}
