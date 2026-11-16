@@ -63,7 +63,7 @@ interface Props {
     catNoPupil: any
     catHello: string
     intro: "pop" | "deal"
-    mode: "desktop" | "sweeper"
+    mode: "desktop" | "sweeper" | "fishing"
     showCat: boolean
     style?: React.CSSProperties
 }
@@ -1027,6 +1027,318 @@ function Sweeper({
     )
 }
 
+
+// ---------- fishing game ----------------------------------------------------------------------
+// Resources are the special fish. Click the water to drop the hook; catch one to open it.
+const FISH_COLORS = ["#FF6A3D", "#FFC21A", "#FF4FA3", "#21C47B", "#9B6BFF", "#2F6BFF"]
+
+function FishSvg({ color, size, special }: { color: string; size: number; special: boolean }) {
+    return (
+        <svg width={size} height={size * 0.6} viewBox="0 0 100 60" style={{ overflow: "visible", display: "block" }}>
+            <path d="M78 30 L100 12 L96 30 L100 48 Z" fill={color} opacity=".9" />
+            <ellipse cx="44" cy="30" rx="40" ry="22" fill={color} />
+            <path d="M30 10 Q44 0 58 10" fill={color} opacity=".85" />
+            <path d="M40 30 Q48 22 56 30 Q48 38 40 30" fill="rgba(255,255,255,.18)" />
+            <circle cx="18" cy="25" r="5.5" fill="#fff" />
+            <circle cx="16.8" cy="25" r="3" fill="#111" />
+            {special ? <circle cx="62" cy="18" r="3" fill="#fff" opacity=".8" /> : null}
+        </svg>
+    )
+}
+
+function Fishing({
+    items,
+    onOpen,
+    isPhone,
+    maxW,
+    maxH,
+    cat,
+}: {
+    items: Project[]
+    onOpen: (i: number, el: HTMLElement) => void
+    isPhone: boolean
+    maxW: number
+    maxH: number
+    cat: { open: string; half: string; closed: string }
+}) {
+    const W = Math.round(Math.min(isPhone ? maxW - 24 : 640, maxW - 40))
+    const H = Math.round(Math.max(260, Math.min(isPhone ? 380 : 420, maxH)))
+    const n = items.length
+    const pond = useRef<HTMLDivElement>(null)
+    const fishEls = useRef<(HTMLDivElement | null)[]>([])
+    type Fish = { x: number; y: number; vx: number; vy: number; ph: number; res: number; size: number; color: string; caught: boolean }
+    const fish = useRef<Fish[]>([])
+    const hook = useRef<{ x: number; y: number; t0: number; target: number; phase: "down" | "up"; hit: number } | null>(null)
+    const [hookState, setHookState] = useState<{ x: number; y: number; dur: number; up: boolean } | null>(null)
+    const [found, setFound] = useState<number[]>([])
+    const [toast, setToast] = useState("")
+    const [press, setPress] = useState(false)
+    const toastT = useRef<any>(null)
+    const say = (t: string, ms = 2200) => {
+        setToast(t)
+        clearTimeout(toastT.current)
+        toastT.current = setTimeout(() => setToast(""), ms)
+    }
+
+    const spawn = () => {
+        const list: Fish[] = []
+        const total = n + (isPhone ? 4 : 6)
+        for (let i = 0; i < total; i++) {
+            const special = i < n
+            const size = special ? (isPhone ? 58 : 70) : (isPhone ? 30 : 36) + Math.random() * 12
+            list.push({
+                x: Math.random() * (W - size),
+                y: 50 + Math.random() * (H - 110),
+                vx: (Math.random() < 0.5 ? -1 : 1) * (special ? 38 + Math.random() * 22 : 50 + Math.random() * 40),
+                vy: 0,
+                ph: Math.random() * 6.28,
+                res: special ? i : -1,
+                size,
+                color: special ? FISH_COLORS[i % FISH_COLORS.length] : "#2b3a8f",
+                caught: false,
+            })
+        }
+        fish.current = list
+    }
+    const [gen, setGen] = useState(0)
+    useMemo(spawn, [gen, W, H, n])
+
+    useEffect(() => {
+        let raf = 0
+        let last = performance.now()
+        const tick = (t: number) => {
+            const dt = Math.min(0.05, (t - last) / 1000)
+            last = t
+            fish.current.forEach((f, i) => {
+                const el = fishEls.current[i]
+                if (!el) return
+                if (f.caught) return
+                const hk = hook.current
+                if (hk && hk.hit === i) {
+                    // reeled in: follow the hook
+                    const p = Math.min(1, (t - hk.t0) / 700)
+                    f.x = hk.x - f.size / 2
+                    f.y = hk.y - f.size * 0.3 - (hk.y + 60) * p
+                } else {
+                    f.ph += dt * 2
+                    f.x += f.vx * dt
+                    f.y += Math.sin(f.ph) * 10 * dt
+                    if (f.x < -10) (f.x = -10), (f.vx = Math.abs(f.vx))
+                    if (f.x > W - f.size + 10) (f.x = W - f.size + 10), (f.vx = -Math.abs(f.vx))
+                    if (Math.random() < 0.004) f.vx = -f.vx
+                }
+                el.style.transform = `translate(${f.x.toFixed(1)}px, ${f.y.toFixed(1)}px) scaleX(${f.vx > 0 ? -1 : 1})`
+            })
+            raf = requestAnimationFrame(tick)
+        }
+        raf = requestAnimationFrame(tick)
+        return () => cancelAnimationFrame(raf)
+    }, [gen, W, H])
+
+    const cast = (e: React.PointerEvent) => {
+        if (hook.current || !pond.current) return
+        const r = pond.current.getBoundingClientRect()
+        const x = e.clientX - r.left
+        const y = Math.max(40, e.clientY - r.top)
+        const down = 280 + y * 0.6
+        setHookState({ x, y, dur: down, up: false })
+        hook.current = { x, y, t0: 0, target: -1, phase: "down", hit: -1 }
+        setTimeout(() => {
+            // what is under the hook now?
+            let best = -1, bd = 1e9
+            fish.current.forEach((f, i) => {
+                if (f.caught) return
+                const cx = f.x + f.size / 2, cy = f.y + f.size * 0.3
+                const d = Math.hypot(cx - x, cy - y)
+                if (d < f.size * 0.62 && d < bd) (bd = d), (best = i)
+            })
+            const h = hook.current!
+            h.hit = best
+            h.t0 = performance.now()
+            setHookState({ x, y, dur: 700, up: true })
+            const f = best >= 0 ? fish.current[best] : null
+            if (!f) say("Nothing… try again!", 1400)
+            else if (f.res < 0) say(["Too small, back it goes.", "Just a little fish.", "Nope, not a resource."][Math.floor(Math.random() * 3)], 1600)
+            setTimeout(() => {
+                if (f) {
+                    if (f.res >= 0) {
+                        f.caught = true
+                        const i = f.res
+                        setFound((fd) => (fd.includes(i) ? fd : [...fd, i]))
+                        say(`You caught ${items[i].label}!`, 2400)
+                        const el = fishEls.current[best]
+                        if (el) onOpen(i, el)
+                    } else {
+                        // throw the small fish back
+                        f.y = H - 80
+                        f.vx = -f.vx
+                    }
+                }
+                hook.current = null
+                setHookState(null)
+            }, 720)
+        }, down)
+    }
+
+    const reset = () => {
+        setFound([])
+        setGen((g) => g + 1)
+        say("New fish in the pond!", 1600)
+    }
+    const showAll = () => {
+        fish.current.forEach((f) => f.res >= 0 && (f.caught = true))
+        setFound(items.map((_, i) => i))
+    }
+    const faceBg = (u: string): React.CSSProperties => ({
+        backgroundImage: `url("${u}")`,
+        backgroundSize: `${(30 * 1000) / 330}px`,
+        backgroundPosition: `${-(200 * 30) / 330}px ${-(160 * 30) / 330}px`,
+        backgroundRepeat: "no-repeat",
+    })
+
+    return (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <div style={{ background: "#c0c0c0", padding: 6, boxShadow: `${bevel(false)}, 0 30px 70px rgba(30,25,20,.22)`, borderRadius: 4, userSelect: "none" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: 30, padding: "0 6px 0 8px", marginBottom: 6, background: "linear-gradient(90deg, #0004FA, #4d6bff)", color: "#fff", font: `700 14px/1 ${FONT}`, letterSpacing: ".02em" }}>
+                    <span>RESOURCES.pond</span>
+                    <span style={{ width: 20, height: 18, background: "#c0c0c0", boxShadow: bevel(false, 2), color: "#111", display: "flex", alignItems: "center", justifyContent: "center", font: `700 12px/1 ${FONT}` }}>×</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: 6, marginBottom: 6, boxShadow: bevel(true, 2) }}>
+                    <Led n={n - found.length} />
+                    <button
+                        onClick={reset}
+                        onPointerDown={() => setPress(true)}
+                        onPointerUp={() => setPress(false)}
+                        onPointerLeave={() => setPress(false)}
+                        aria-label="New pond"
+                        title="New pond"
+                        style={{ all: "unset", cursor: "pointer", width: 38, height: 38, background: "#c0c0c0", boxShadow: bevel(press, 3), display: "flex", alignItems: "center", justifyContent: "center" }}
+                    >
+                        <span style={{ width: 30, height: 30, ...faceBg(found.length === n ? cat.closed : press ? cat.half : cat.open) }} />
+                    </button>
+                    <Led n={found.length} />
+                </div>
+                {/* the pond */}
+                <div
+                    ref={pond}
+                    onPointerDown={cast}
+                    role="application"
+                    aria-label="Fishing pond. Click the water to drop the hook."
+                    style={{
+                        position: "relative",
+                        width: W,
+                        height: H,
+                        overflow: "hidden",
+                        boxShadow: bevel(true, 3),
+                        background: "linear-gradient(180deg, #9fd3ff 0%, #4f8ff7 38%, #1f4fd6 100%)",
+                        cursor: "crosshair",
+                        touchAction: "manipulation",
+                    }}
+                >
+                    {/* surface */}
+                    <svg width={W} height="40" viewBox={`0 0 ${W} 40`} preserveAspectRatio="none" style={{ position: "absolute", left: 0, top: 0 }}>
+                        <path d={`M0 14 ${Array.from({ length: Math.ceil(W / 40) + 1 }, (_, i) => `Q ${i * 40 + 20} ${i % 2 ? 6 : 22} ${i * 40 + 40} 14`).join(" ")} V0 H0 Z`} fill="#dff1ff" opacity=".8">
+                            <animateTransform attributeName="transform" type="translate" values="0 0; -40 0; 0 0" dur="6s" repeatCount="indefinite" />
+                        </path>
+                    </svg>
+                    {/* light rays + bubbles */}
+                    <div style={{ position: "absolute", inset: 0, background: "repeating-linear-gradient(100deg, rgba(255,255,255,.06) 0 40px, transparent 40px 110px)", pointerEvents: "none" }} />
+                    {Array.from({ length: 10 }, (_, i) => (
+                        <span
+                            key={i}
+                            style={{
+                                position: "absolute",
+                                left: `${(i * 37) % 100}%`,
+                                bottom: -10,
+                                width: 4 + (i % 3) * 3,
+                                height: 4 + (i % 3) * 3,
+                                borderRadius: 99,
+                                border: "1.5px solid rgba(255,255,255,.6)",
+                                animation: `wd-bubble ${5 + (i % 4)}s linear ${i * 0.7}s infinite`,
+                                pointerEvents: "none",
+                            }}
+                        />
+                    ))}
+                    {/* seabed */}
+                    <svg width={W} height="60" viewBox={`0 0 ${W} 60`} preserveAspectRatio="none" style={{ position: "absolute", left: 0, bottom: 0, pointerEvents: "none" }}>
+                        <path d={`M0 40 Q ${W * 0.2} 20 ${W * 0.4} 38 T ${W * 0.8} 34 T ${W} 30 V60 H0 Z`} fill="#e9d7a8" />
+                        <path d={`M${W * 0.12} 40 q 6 -40 0 -60 M${W * 0.15} 38 q -8 -30 2 -50 M${W * 0.86} 34 q 6 -36 -2 -54`} stroke="#1f8a3b" strokeWidth="5" fill="none" strokeLinecap="round" />
+                    </svg>
+                    {/* fish */}
+                    {fish.current.map((f, i) => (
+                        <div
+                            key={`${gen}-${i}`}
+                            ref={(el) => {
+                                fishEls.current[i] = el
+                            }}
+                            style={{ position: "absolute", left: 0, top: 0, width: f.size, pointerEvents: "none", display: f.caught && found.includes(f.res) ? "none" : "block", filter: f.res >= 0 ? "drop-shadow(0 0 6px rgba(255,255,255,.55))" : "none" }}
+                        >
+                            <FishSvg color={f.color} size={f.size} special={f.res >= 0} />
+                            {f.res >= 0 ? (
+                                <span style={{ position: "absolute", left: "38%", top: "-30%", font: `800 ${f.size * 0.22}px/1 ${FONT}`, color: "#fff", textShadow: "0 1px 2px rgba(0,0,0,.4)" }}>?</span>
+                            ) : null}
+                        </div>
+                    ))}
+                    {/* hook and line */}
+                    {hookState ? (
+                        <div
+                            key={`${hookState.x}-${hookState.up}`}
+                            style={{
+                                position: "absolute",
+                                left: hookState.x,
+                                top: 0,
+                                width: 2,
+                                height: hookState.y,
+                                background: "rgba(20,20,20,.75)",
+                                transformOrigin: "top",
+                                animation: hookState.up ? `wd-reel ${hookState.dur}ms cubic-bezier(.5,0,.8,.4) forwards` : `wd-drop ${hookState.dur}ms cubic-bezier(.2,.7,.3,1) forwards`,
+                                pointerEvents: "none",
+                            }}
+                        >
+                            <svg width="18" height="22" viewBox="0 0 18 22" style={{ position: "absolute", left: -8, bottom: -18 }}>
+                                <path d="M9 0 V14 a5 5 0 1 1 -8 -4" fill="none" stroke="#3b3b3b" strokeWidth="2.4" strokeLinecap="round" />
+                            </svg>
+                        </div>
+                    ) : null}
+                    {toast ? (
+                        <div key={toast} style={{ position: "absolute", left: "50%", top: 18, transform: "translateX(-50%)", background: "#fff", color: "#111", borderRadius: 999, padding: "8px 14px", font: `600 14px/1 ${FONT}`, boxShadow: "0 6px 18px rgba(0,0,0,.15)", whiteSpace: "nowrap", animation: "wd-say .3s cubic-bezier(.2,.9,.3,1.3) both", pointerEvents: "none" }}>
+                            {toast}
+                        </div>
+                    ) : null}
+                </div>
+            </div>
+            {/* caught tray */}
+            <div style={{ marginTop: 18, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", justifyContent: "center", font: `500 14px/1.3 ${FONT}`, color: "#55524d", maxWidth: W + 40 }}>
+                {found.length === 0 ? (
+                    <span>
+                        {n} resources are swimming in the pond — the shiny fish. Click the water to drop the hook.{" "}
+                        <button onClick={showAll} style={{ all: "unset", cursor: "pointer", textDecoration: "underline", color: "#111" }}>
+                            Show me
+                        </button>
+                    </span>
+                ) : (
+                    items.map((it, i) =>
+                        found.includes(i) ? (
+                            <button key={i} onClick={(e) => onOpen(i, e.currentTarget)} className="wd-chip" style={{ all: "unset", cursor: "pointer", background: "#fff", borderRadius: 99, padding: "8px 12px", font: `500 14px/1 ${FONT}`, color: "#111", boxShadow: "0 1px 2px rgba(0,0,0,.08)" }}>
+                                {it.label} ↗
+                            </button>
+                        ) : (
+                            <span key={i} style={{ background: "rgba(0,0,0,.06)", borderRadius: 99, padding: "8px 12px", font: `500 14px/1 ${FONT}`, color: "#8a867f" }}>
+                                ???
+                            </span>
+                        )
+                    )
+                )}
+                {found.length > 0 && found.length < n ? (
+                    <button onClick={showAll} style={{ all: "unset", cursor: "pointer", textDecoration: "underline", color: "#111" }}>
+                        Show the rest
+                    </button>
+                ) : null}
+            </div>
+        </div>
+    )
+}
+
 // ---------- main ------------------------------------------------------------------------------
 /**
  * Work Desktop — projects as draggable folders and files around a blinking cat.
@@ -1278,6 +1590,9 @@ export default function WorkDesktop(props: Props) {
 @keyframes wd-in { from { opacity: 0; transform: translate(var(--ox), var(--oy)) scale(.18) } to { opacity: 1; transform: translate(0,0) scale(1) } }
 @keyframes wd-say { from { opacity: 0; transform: translate(-50%, 8px) scale(.85) } to { opacity: 1; transform: translate(-50%, 0) scale(1) } }
 @keyframes wd-say-r { from { opacity: 0; transform: translateY(8px) scale(.85) } to { opacity: 1; transform: none } }
+@keyframes wd-bubble { from { transform: translateY(0); opacity: 0 } 10% { opacity: 1 } to { transform: translateY(-460px); opacity: 0 } }
+@keyframes wd-drop { from { transform: scaleY(0) } to { transform: scaleY(1) } }
+@keyframes wd-reel { from { transform: scaleY(1) } to { transform: scaleY(0) } }
 @keyframes wd-out { to { opacity: 0; transform: scale(.94) } }
 @keyframes wd-pop { from { opacity: 0; transform: translateY(14px) scale(.9) } to { opacity: 1; transform: none } }
 .wd-item:hover .wd-label, .wd-item:focus-visible .wd-label { background: ${accent}; color: #fff !important; }
@@ -1316,6 +1631,24 @@ export default function WorkDesktop(props: Props) {
                 </div>
             ) : null}
 
+            {/* fishing mode */}
+            {w > 0 && props.mode === "fishing" ? (
+                <div style={{ position: "absolute", left: "50%", top: top + (h - top) / 2, transform: "translate(-50%, -50%)", zIndex: 3 }}>
+                    <Fishing
+                        items={projects || []}
+                        isPhone={isPhone}
+                        maxW={w}
+                        maxH={h - top - 200}
+                        cat={{ open: src(props.catOpen), half: src(props.catHalf), closed: src(props.catClosed) }}
+                        onOpen={(i, el) => {
+                            const r = el.getBoundingClientRect()
+                            setOrigin({ x: r.left + r.width / 2, y: r.top + r.height / 2 })
+                            setOpenIdx(i)
+                        }}
+                    />
+                </div>
+            ) : null}
+
             {/* minesweeper mode */}
             {w > 0 && props.mode === "sweeper" ? (
                 <div style={{ position: "absolute", left: "50%", top: isPhone ? (props.showCat === false ? "50%" : "56%") : props.showCat === false ? top + (h - top) / 2 : top + 170 + (h - top - 170) / 2 - 20, transform: "translate(-50%, -50%)", zIndex: 3 }}>
@@ -1336,7 +1669,7 @@ export default function WorkDesktop(props: Props) {
             ) : null}
 
             {/* cat */}
-            {w > 0 && props.mode !== "sweeper" ? (
+            {w > 0 && props.mode !== "sweeper" && props.mode !== "fishing" ? (
             <div
                 style={{
                     position: "absolute",
@@ -1351,7 +1684,7 @@ export default function WorkDesktop(props: Props) {
             ) : null}
 
             {/* items */}
-            {props.mode === "sweeper" ? null : isPhone ? (
+            {props.mode === "sweeper" || props.mode === "fishing" ? null : isPhone ? (
                 <div
                     style={{
                         position: "absolute",
@@ -1435,7 +1768,7 @@ export default function WorkDesktop(props: Props) {
             ) : null}
 
             {/* bottom bar: hint + gravity */}
-            {!isPhone && props.mode !== "sweeper" ? (
+            {!isPhone && props.mode !== "sweeper" && props.mode !== "fishing" ? (
                 <div
                     style={{
                         position: "absolute",
@@ -1595,7 +1928,7 @@ addPropertyControls(WorkDesktop, {
     catNoPupil: { type: ControlType.ResponsiveImage, title: "Cat · no pupils", description: "Optional: makes the cat follow the cursor with its eyes." },
     catHello: { type: ControlType.String, title: "Cat greeting" },
     showCat: { type: ControlType.Boolean, title: "Show cat", defaultValue: true },
-    mode: { type: ControlType.Enum, title: "Mode", options: ["desktop", "sweeper"], optionTitles: ["Desktop", "Minesweeper"], defaultValue: "desktop" },
+    mode: { type: ControlType.Enum, title: "Mode", options: ["desktop", "sweeper", "fishing"], optionTitles: ["Desktop", "Minesweeper", "Fishing"], defaultValue: "desktop" },
     intro: { type: ControlType.Enum, title: "Intro", options: ["pop", "deal"], optionTitles: ["Pop in", "Cat deals the files"], defaultValue: "pop" },
     topOffset: { type: ControlType.Number, title: "Top offset", defaultValue: 16, min: 0, max: 200, unit: "px" },
 })
