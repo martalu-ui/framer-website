@@ -1061,7 +1061,7 @@ function Fishing({
     maxH: number
     cat: { open: string; half: string; closed: string }
 }) {
-    const W = Math.round(Math.min(isPhone ? maxW - 24 : 640, maxW - 40))
+    const W = Math.round(Math.min(isPhone ? maxW - 64 : 640, maxW - 40))
     const H = Math.round(Math.max(260, Math.min(isPhone ? 380 : 420, maxH)))
     const n = items.length
     const pond = useRef<HTMLDivElement>(null)
