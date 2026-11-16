@@ -1060,14 +1060,16 @@ function Fishing({
     maxH,
     cat,
     fishImgs = [],
+    showCat = false,
 }: {
+    showCat?: boolean
     fishImgs?: string[]
     items: Project[]
     onOpen: (i: number, el: HTMLElement) => void
     isPhone: boolean
     maxW: number
     maxH: number
-    cat: { open: string; half: string; closed: string }
+    cat: { open: string; half: string; closed: string; noPupil?: string }
 }) {
     const W = Math.round(Math.min(isPhone ? maxW - 64 : 640, maxW - 40))
     const H = Math.round(Math.max(260, Math.min(isPhone ? 380 : 420, maxH)))
@@ -1222,8 +1224,16 @@ function Fishing({
         backgroundRepeat: "no-repeat",
     })
 
+    const catSize = isPhone ? 110 : 150
+    const pondRect = pond.current?.getBoundingClientRect()
+    const catLook = hookState && pondRect ? { x: pondRect.left + hookState.x, y: pondRect.top + hookState.y } : null
     return (
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+        <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center" }}>
+            {showCat ? (
+                <div style={{ position: "absolute", right: isPhone ? 10 : 40, top: -catSize * 0.83, zIndex: 3 }}>
+                    <Cat open={cat.open} half={cat.half} closed={cat.closed} noPupil={cat.noPupil} size={catSize} look={catLook} say={toast} bubble="right" />
+                </div>
+            ) : null}
             <div style={{ background: "#fff", borderRadius: 22, boxShadow: "0 0 0 10px rgba(255,255,255,.5), 0 0 0 11px rgba(0,0,0,.05), 0 40px 90px rgba(30,25,20,.18)", userSelect: "none", overflow: "hidden" }}>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", height: 54, padding: "0 16px 0 20px", borderBottom: "1px solid rgba(0,0,0,.07)" }}>
                     <div style={{ display: "flex", gap: 8 }}>
@@ -1383,7 +1393,7 @@ function Fishing({
                             </svg>
                         </div>
                     ) : null}
-                    {toast ? (
+                    {toast && !showCat ? (
                         <div key={toast} style={{ position: "absolute", left: "50%", top: 18, transform: "translateX(-50%)", background: "#fff", color: "#111", borderRadius: 999, padding: "8px 14px", font: `600 14px/1 ${FONT}`, boxShadow: "0 6px 18px rgba(0,0,0,.15)", whiteSpace: "nowrap", animation: "wd-say .3s cubic-bezier(.2,.9,.3,1.3) both", pointerEvents: "none" }}>
                             {toast}
                         </div>
@@ -1722,13 +1732,14 @@ export default function WorkDesktop(props: Props) {
 
             {/* fishing mode */}
             {w > 0 && props.mode === "fishing" ? (
-                <div style={{ position: "absolute", left: "50%", top: top + (h - top) / 2, transform: "translate(-50%, -50%)", zIndex: 3 }}>
+                <div style={{ position: "absolute", left: "50%", top: top + (h - top) / 2 + (props.showCat !== false ? 50 : 0), transform: "translate(-50%, -50%)", zIndex: 3 }}>
                     <Fishing
                         items={projects || []}
                         isPhone={isPhone}
                         maxW={w}
-                        maxH={h - top - 200}
-                        cat={{ open: src(props.catOpen), half: src(props.catHalf), closed: src(props.catClosed) }}
+                        maxH={h - top - 200 - (props.showCat !== false ? 110 : 0)}
+                        showCat={props.showCat !== false}
+                        cat={{ open: src(props.catOpen), half: src(props.catHalf), closed: src(props.catClosed), noPupil: src(props.catNoPupil) || undefined }}
                         fishImgs={[props.fish1, props.fish2, props.fish3, props.fish4, props.fish5, props.fish6].map((v: any) => sized(src(v), 400)).filter(Boolean)}
                         onOpen={(i, el) => {
                             const r = el.getBoundingClientRect()
