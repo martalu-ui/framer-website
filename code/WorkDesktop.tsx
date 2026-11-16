@@ -1874,7 +1874,7 @@ export default function WorkDesktop(props: Props) {
                     style={{
                         position: "absolute",
                         left: "50%",
-                        bottom: 24,
+                        bottom: 86,
                         transform: "translateX(-50%)",
                         color: ink,
                         display: "flex",
