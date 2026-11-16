@@ -65,6 +65,7 @@ interface Props {
     intro: "pop" | "deal"
     mode: "desktop" | "sweeper" | "fishing"
     showCat: boolean
+    fishImages: any[]
     style?: React.CSSProperties
 }
 
@@ -1053,7 +1054,9 @@ function Fishing({
     maxW,
     maxH,
     cat,
+    fishImgs = [],
 }: {
+    fishImgs?: string[]
     items: Project[]
     onOpen: (i: number, el: HTMLElement) => void
     isPhone: boolean
@@ -1066,7 +1069,7 @@ function Fishing({
     const n = items.length
     const pond = useRef<HTMLDivElement>(null)
     const fishEls = useRef<(HTMLDivElement | null)[]>([])
-    type Fish = { x: number; y: number; vx: number; vy: number; ph: number; res: number; size: number; color: string; caught: boolean }
+    type Fish = { x: number; y: number; vx: number; vy: number; ph: number; res: number; size: number; color: string; caught: boolean; img: string }
     const fish = useRef<Fish[]>([])
     const hook = useRef<{ x: number; y: number; t0: number; target: number; phase: "down" | "up"; hit: number } | null>(null)
     const [hookState, setHookState] = useState<{ x: number; y: number; dur: number; up: boolean } | null>(null)
@@ -1085,10 +1088,10 @@ function Fishing({
         const total = n + (isPhone ? 4 : 6)
         for (let i = 0; i < total; i++) {
             const special = i < n
-            const size = special ? (isPhone ? 58 : 70) : (isPhone ? 30 : 36) + Math.random() * 12
+            const size = fishImgs.length ? (special ? (isPhone ? 66 : 86) : (isPhone ? 40 : 48) + Math.random() * 14) : special ? (isPhone ? 58 : 70) : (isPhone ? 30 : 36) + Math.random() * 12
             list.push({
                 x: Math.random() * (W - size),
-                y: 50 + Math.random() * (H - 110),
+                y: 44 + Math.random() * Math.max(10, H - 130 - size * 0.8),
                 vx: (Math.random() < 0.5 ? -1 : 1) * (special ? 38 + Math.random() * 22 : 50 + Math.random() * 40),
                 vy: 0,
                 ph: Math.random() * 6.28,
@@ -1096,6 +1099,7 @@ function Fishing({
                 size,
                 color: special ? FISH_COLORS[i % FISH_COLORS.length] : "#2b3a8f",
                 caught: false,
+                img: fishImgs.length ? fishImgs[special ? i % fishImgs.length : (n + i) % fishImgs.length] : "",
             })
         }
         fish.current = list
@@ -1148,7 +1152,7 @@ function Fishing({
             let best = -1, bd = 1e9
             fish.current.forEach((f, i) => {
                 if (f.caught) return
-                const cx = f.x + f.size / 2, cy = f.y + f.size * 0.3
+                const cx = f.x + f.size / 2, cy = f.y + f.size * (f.img ? 0.42 : 0.3)
                 const d = Math.hypot(cx - x, cy - y)
                 if (d < f.size * 0.62 && d < bd) (bd = d), (best = i)
             })
@@ -1276,11 +1280,15 @@ function Fishing({
                             ref={(el) => {
                                 fishEls.current[i] = el
                             }}
-                            style={{ position: "absolute", left: 0, top: 0, width: f.size, pointerEvents: "none", display: f.caught && found.includes(f.res) ? "none" : "block", filter: f.res >= 0 ? "drop-shadow(0 0 6px rgba(255,255,255,.55))" : "none" }}
+                            style={{ position: "absolute", left: 0, top: 0, width: f.size, pointerEvents: "none", display: f.caught && found.includes(f.res) ? "none" : "block", filter: f.res >= 0 ? "drop-shadow(0 0 8px rgba(255,255,255,.7))" : "none", opacity: f.res >= 0 || !f.img ? 1 : 0.85 }}
                         >
-                            <FishSvg color={f.color} size={f.size} special={f.res >= 0} />
+                            {f.img ? (
+                                <img src={f.img} alt="" draggable={false} style={{ width: f.size, height: "auto", display: "block", filter: "drop-shadow(0 4px 6px rgba(10,30,90,.25))" }} />
+                            ) : (
+                                <FishSvg color={f.color} size={f.size} special={f.res >= 0} />
+                            )}
                             {f.res >= 0 ? (
-                                <span style={{ position: "absolute", left: "38%", top: "-30%", font: `800 ${f.size * 0.22}px/1 ${FONT}`, color: "#fff", textShadow: "0 1px 2px rgba(0,0,0,.4)" }}>?</span>
+                                <span style={{ position: "absolute", left: "40%", top: f.img ? "-22%" : "-30%", font: `800 ${Math.max(13, f.size * 0.2)}px/1 ${FONT}`, color: "#fff", textShadow: "0 1px 2px rgba(0,0,0,.4)" }}>?</span>
                             ) : null}
                         </div>
                     ))}
@@ -1647,6 +1655,7 @@ export default function WorkDesktop(props: Props) {
                         maxW={w}
                         maxH={h - top - 200}
                         cat={{ open: src(props.catOpen), half: src(props.catHalf), closed: src(props.catClosed) }}
+                        fishImgs={(props.fishImages || []).map((v) => sized(src(v), 400)).filter(Boolean)}
                         onOpen={(i, el) => {
                             const r = el.getBoundingClientRect()
                             setOrigin({ x: r.left + r.width / 2, y: r.top + r.height / 2 })
@@ -1934,6 +1943,7 @@ addPropertyControls(WorkDesktop, {
     folderColor: { type: ControlType.Color, title: "Folder", defaultValue: "#141414" },
     catNoPupil: { type: ControlType.ResponsiveImage, title: "Cat · no pupils", description: "Optional: makes the cat follow the cursor with its eyes." },
     catHello: { type: ControlType.String, title: "Cat greeting" },
+    fishImages: { type: ControlType.Array, title: "Fish", control: { type: ControlType.ResponsiveImage }, description: "First ones are the resource fish, the rest swim around." },
     showCat: { type: ControlType.Boolean, title: "Show cat", defaultValue: true },
     mode: { type: ControlType.Enum, title: "Mode", options: ["desktop", "sweeper", "fishing"], optionTitles: ["Desktop", "Minesweeper", "Fishing"], defaultValue: "desktop" },
     intro: { type: ControlType.Enum, title: "Intro", options: ["pop", "deal"], optionTitles: ["Pop in", "Cat deals the files"], defaultValue: "pop" },
