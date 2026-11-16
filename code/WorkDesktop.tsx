@@ -1132,9 +1132,26 @@ function Fishing({
                     f.ph += dt * 2
                     f.x += f.vx * dt
                     f.y += Math.sin(f.ph) * 10 * dt
-                    if (f.x < -10) (f.x = -10), (f.vx = Math.abs(f.vx))
-                    if (f.x > W - f.size + 10) (f.x = W - f.size + 10), (f.vx = -Math.abs(f.vx))
-                    if (Math.random() < 0.004) f.vx = -f.vx
+                    // swim out of the tank and come back in as a new fish
+                    const out = f.vx < 0 ? f.x < -f.size - 24 : f.x > W + 24
+                    if (out) {
+                        const dir = Math.random() < 0.5 ? -1 : 1
+                        f.vx = dir * Math.abs(f.vx) * (0.85 + Math.random() * 0.3)
+                        f.x = dir < 0 ? W + 20 : -f.size - 20
+                        f.y = 44 + Math.random() * Math.max(10, H - 130 - f.size * 0.8)
+                        if (f.res < 0 && fishImgs.length) {
+                            const pool = fishImgs.slice(Math.min(n, fishImgs.length - 1))
+                            f.img = (pool.length ? pool : fishImgs)[Math.floor(Math.random() * (pool.length || fishImgs.length))]
+                            f.size = (isPhone ? 40 : 48) + Math.random() * 14
+                            const im = el.querySelector("img")
+                            if (im) {
+                                im.src = f.img
+                                im.style.width = f.size + "px"
+                            }
+                            el.style.width = f.size + "px"
+                        }
+                    }
+                    f.y = Math.max(30, Math.min(H - 70 - f.size * 0.6, f.y))
                 }
                 el.style.transform = `translate(${f.x.toFixed(1)}px, ${f.y.toFixed(1)}px) scaleX(${f.vx > 0 ? -1 : 1})`
             })
@@ -1244,40 +1261,88 @@ function Fishing({
                         height: H,
                         overflow: "hidden",
                         borderRadius: 14,
-                        background: "linear-gradient(180deg, #bfe3ff 0%, #6aa8ff 34%, #2a5cf0 78%, #1638c9 100%)",
+                        background: "linear-gradient(180deg, #DDF6F7 0%, #A9E4EC 30%, #6CC5DA 68%, #3FA3C6 100%)",
                         cursor: "crosshair",
                         touchAction: "manipulation",
                     }}
                 >
-                    {/* surface */}
-                    <svg width={W} height="40" viewBox={`0 0 ${W} 40`} preserveAspectRatio="none" style={{ position: "absolute", left: 0, top: 0 }}>
-                        <path d={`M0 14 ${Array.from({ length: Math.ceil(W / 40) + 1 }, (_, i) => `Q ${i * 40 + 20} ${i % 2 ? 6 : 22} ${i * 40 + 40} 14`).join(" ")} V0 H0 Z`} fill="#dff1ff" opacity=".8">
-                            <animateTransform attributeName="transform" type="translate" values="0 0; -40 0; 0 0" dur="6s" repeatCount="indefinite" />
-                        </path>
-                    </svg>
-                    {/* light rays + bubbles */}
-                    <div style={{ position: "absolute", inset: 0, background: "repeating-linear-gradient(100deg, rgba(255,255,255,.06) 0 40px, transparent 40px 110px)", pointerEvents: "none" }} />
-                    {Array.from({ length: 10 }, (_, i) => (
-                        <span
-                            key={i}
-                            style={{
-                                position: "absolute",
-                                left: `${(i * 37) % 100}%`,
-                                bottom: -10,
-                                width: 4 + (i % 3) * 3,
-                                height: 4 + (i % 3) * 3,
-                                borderRadius: 99,
-                                border: "1.5px solid rgba(255,255,255,.6)",
-                                animation: `wd-bubble ${5 + (i % 4)}s linear ${i * 0.7}s infinite`,
-                                pointerEvents: "none",
-                            }}
-                        />
+                    {/* light: soft caustics drifting over the water */}
+                    <div className="wd-caustics" style={{ position: "absolute", inset: "-20%", opacity: 0.55, mixBlendMode: "soft-light", pointerEvents: "none", background: "radial-gradient(60px 26px at 20% 30%, #fff, transparent 70%), radial-gradient(80px 30px at 70% 20%, #fff, transparent 70%), radial-gradient(70px 24px at 45% 55%, #fff, transparent 70%), radial-gradient(90px 30px at 85% 65%, #fff, transparent 70%), radial-gradient(60px 22px at 12% 75%, #fff, transparent 70%), radial-gradient(70px 26px at 60% 85%, #fff, transparent 70%)", backgroundSize: "340px 260px", animation: "wd-caustic 18s linear infinite" }} />
+                    {/* god rays */}
+                    {[0.18, 0.42, 0.68, 0.86].map((x, i) => (
+                        <div key={i} style={{ position: "absolute", top: -40, left: `${x * 100}%`, width: 60 + i * 18, height: "85%", background: "linear-gradient(180deg, rgba(255,255,255,.55), rgba(255,255,255,0))", transform: "skewX(-14deg)", filter: "blur(10px)", opacity: 0.5, animation: `wd-ray ${6 + i * 1.7}s ease-in-out ${i * 0.8}s infinite alternate`, pointerEvents: "none" }} />
                     ))}
-                    {/* seabed */}
-                    <svg width={W} height="60" viewBox={`0 0 ${W} 60`} preserveAspectRatio="none" style={{ position: "absolute", left: 0, bottom: 0, pointerEvents: "none" }}>
-                        <path d={`M0 40 Q ${W * 0.2} 20 ${W * 0.4} 38 T ${W * 0.8} 34 T ${W} 30 V60 H0 Z`} fill="#e9d7a8" />
-                        <path d={`M${W * 0.12} 40 q 6 -40 0 -60 M${W * 0.15} 38 q -8 -30 2 -50 M${W * 0.86} 34 q 6 -36 -2 -54`} stroke="#1f8a3b" strokeWidth="5" fill="none" strokeLinecap="round" />
+                    {/* surface shimmer */}
+                    <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: 26, background: "linear-gradient(180deg, rgba(255,255,255,.75), rgba(255,255,255,0))", pointerEvents: "none" }} />
+                    {/* bubbles */}
+                    {Array.from({ length: 12 }, (_, i) => {
+                        const sz = 6 + (i % 4) * 4
+                        return (
+                            <span
+                                key={i}
+                                style={{
+                                    position: "absolute",
+                                    left: `${(i * 29 + 7) % 96}%`,
+                                    bottom: 30,
+                                    width: sz,
+                                    height: sz,
+                                    borderRadius: 99,
+                                    background: "radial-gradient(circle at 32% 30%, rgba(255,255,255,.95) 0 18%, rgba(255,255,255,.25) 40%, rgba(255,255,255,.08) 70%)",
+                                    boxShadow: "inset 0 0 0 1px rgba(255,255,255,.55)",
+                                    animation: `wd-bubble2 ${6 + (i % 5)}s ease-in ${i * 0.9}s infinite`,
+                                    pointerEvents: "none",
+                                }}
+                            />
+                        )
+                    })}
+                    {/* seabed: soft sand, clay pebbles, coral and swaying seaweed */}
+                    <svg width={W} height="96" viewBox={`0 0 ${W} 96`} style={{ position: "absolute", left: 0, bottom: 0, pointerEvents: "none", overflow: "visible" }}>
+                        <defs>
+                            <linearGradient id="wd-sand" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0" stopColor="#F6E3C4" />
+                                <stop offset="1" stopColor="#E7C99D" />
+                            </linearGradient>
+                            <radialGradient id="wd-peb1" cx=".35" cy=".3" r=".8"><stop offset="0" stopColor="#FFFFFF" /><stop offset=".25" stopColor="#F3D9E4" /><stop offset="1" stopColor="#D9A8BE" /></radialGradient>
+                            <radialGradient id="wd-peb2" cx=".35" cy=".3" r=".8"><stop offset="0" stopColor="#FFFFFF" /><stop offset=".25" stopColor="#D6E6F7" /><stop offset="1" stopColor="#9EB8DA" /></radialGradient>
+                            <radialGradient id="wd-peb3" cx=".35" cy=".3" r=".8"><stop offset="0" stopColor="#FFFDF5" /><stop offset=".25" stopColor="#EFE6D6" /><stop offset="1" stopColor="#CDBFA6" /></radialGradient>
+                            <linearGradient id="wd-weed" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="#7FCB8E" /><stop offset=".5" stopColor="#A6E0AE" /><stop offset="1" stopColor="#5DAE70" /></linearGradient>
+                            <radialGradient id="wd-coral" cx=".35" cy=".3" r=".9"><stop offset="0" stopColor="#FFC9B5" /><stop offset="1" stopColor="#F28B74" /></radialGradient>
+                        </defs>
+                        {/* seaweed */}
+                        {[
+                            [0.07, 64, 0],
+                            [0.1, 82, 1],
+                            [0.13, 56, 2],
+                            [0.9, 74, 1],
+                            [0.93, 54, 0],
+                        ].map(([x, hgt, d], i) => (
+                            <path
+                                key={i}
+                                d={`M${W * (x as number)} 80 C ${W * (x as number) - 14} ${80 - (hgt as number) * 0.4}, ${W * (x as number) + 14} ${80 - (hgt as number) * 0.7}, ${W * (x as number)} ${80 - (hgt as number)}`}
+                                stroke="url(#wd-weed)"
+                                strokeWidth="11"
+                                strokeLinecap="round"
+                                fill="none"
+                                style={{ transformOrigin: `${W * (x as number)}px 80px`, animation: `wd-sway ${3.2 + (d as number) * 0.6}s ease-in-out ${i * 0.4}s infinite alternate` }}
+                            />
+                        ))}
+                        {/* coral */}
+                        <g transform={`translate(${W * 0.8} 70)`}>
+                            <path d="M0 14 C -2 0, -14 -6, -12 -22 M0 14 C 2 -2, 10 -10, 8 -30 M4 0 C 12 -4, 18 -2, 22 -14" stroke="url(#wd-coral)" strokeWidth="10" strokeLinecap="round" fill="none" />
+                        </g>
+                        {/* sand */}
+                        <path d={`M0 66 C ${W * 0.18} 52, ${W * 0.34} 74, ${W * 0.52} 64 S ${W * 0.84} 54, ${W} 66 V96 H0 Z`} fill="url(#wd-sand)" />
+                        <path d={`M0 66 C ${W * 0.18} 52, ${W * 0.34} 74, ${W * 0.52} 64 S ${W * 0.84} 54, ${W} 66`} stroke="rgba(255,255,255,.7)" strokeWidth="2" fill="none" />
+                        {/* pebbles */}
+                        <ellipse cx={W * 0.24} cy="72" rx="16" ry="11" fill="url(#wd-peb1)" />
+                        <ellipse cx={W * 0.28} cy="76" rx="10" ry="7" fill="url(#wd-peb3)" />
+                        <ellipse cx={W * 0.58} cy="70" rx="13" ry="9" fill="url(#wd-peb2)" />
+                        <ellipse cx={W * 0.62} cy="74" rx="8" ry="6" fill="url(#wd-peb1)" />
+                        <ellipse cx={W * 0.71} cy="72" rx="11" ry="8" fill="url(#wd-peb3)" />
+                        <ellipse cx={W * 0.86} cy="76" rx="15" ry="10" fill="url(#wd-peb2)" />
                     </svg>
+                    {/* soft vignette for depth */}
+                    <div style={{ position: "absolute", inset: 0, boxShadow: "inset 0 0 60px rgba(20,70,110,.25)", borderRadius: 14, pointerEvents: "none" }} />
                     {/* fish */}
                     {fish.current.map((f, i) => (
                         <div
@@ -1612,6 +1677,10 @@ export default function WorkDesktop(props: Props) {
 @keyframes wd-bubble { from { transform: translateY(0); opacity: 0 } 10% { opacity: 1 } to { transform: translateY(-460px); opacity: 0 } }
 @keyframes wd-drop { from { transform: scaleY(0) } to { transform: scaleY(1) } }
 @keyframes wd-reel { from { transform: scaleY(1) } to { transform: scaleY(0) } }
+@keyframes wd-caustic { from { transform: translate(0,0) } to { transform: translate(-340px, 120px) } }
+@keyframes wd-ray { from { opacity: .25 } to { opacity: .6 } }
+@keyframes wd-sway { from { transform: rotate(-6deg) } to { transform: rotate(6deg) } }
+@keyframes wd-bubble2 { 0% { transform: translate(0,0); opacity: 0 } 10% { opacity: 1 } 50% { transform: translate(6px,-200px) } 100% { transform: translate(-4px,-420px); opacity: 0 } }
 @keyframes wd-out { to { opacity: 0; transform: scale(.94) } }
 @keyframes wd-pop { from { opacity: 0; transform: translateY(14px) scale(.9) } to { opacity: 1; transform: none } }
 .wd-item:hover .wd-label, .wd-item:focus-visible .wd-label { background: ${accent}; color: #fff !important; }
