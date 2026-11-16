@@ -14,16 +14,20 @@ type Item = { label: string; short?: string; href: string }
  * @framerSupportedLayoutHeight any
  */
 export default function FloatingNav(props: any) {
-    const { items, accent, ink, paper, bottom, showLogo, style } = props
+    const { items, accent, ink, paper, bottom, bottomPhone, showLogo, style } = props
     const list: Item[] = items && items.length ? items : FloatingNav.defaultProps.items
     const isCanvas = RenderTarget.current() === RenderTarget.canvas
     const [path, setPath] = useState("")
     const [narrow, setNarrow] = useState(false)
+    const [phone, setPhone] = useState(false)
     const [shown, setShown] = useState(false)
 
     useEffect(() => {
         setPath(window.location.pathname.toLowerCase().replace(/\/+$/, "") || "/")
-        const onR = () => setNarrow(window.innerWidth < 560)
+        const onR = () => {
+            setNarrow(window.innerWidth < 560)
+            setPhone(window.innerWidth < 810)
+        }
         onR()
         window.addEventListener("resize", onR)
         const t = window.setTimeout(() => setShown(true), 80)
@@ -112,7 +116,7 @@ export default function FloatingNav(props: any) {
                 position: "fixed",
                 left: 0,
                 right: 0,
-                bottom: `calc(${bottom}px + env(safe-area-inset-bottom, 0px))`,
+                bottom: `calc(${phone ? bottomPhone : bottom}px + env(safe-area-inset-bottom, 0px))`,
                 display: "flex",
                 justifyContent: "center",
                 zIndex: 1000,
@@ -138,6 +142,7 @@ FloatingNav.defaultProps = {
     ink: "#111111",
     paper: "#FFFFFF",
     bottom: 20,
+    bottomPhone: 44,
     showLogo: true,
 }
 
@@ -158,5 +163,6 @@ addPropertyControls(FloatingNav, {
     ink: { type: ControlType.Color, title: "Text", defaultValue: "#111111" },
     paper: { type: ControlType.Color, title: "Background", defaultValue: "#FFFFFF" },
     bottom: { type: ControlType.Number, title: "Bottom", defaultValue: 20, min: 0, max: 120 },
+    bottomPhone: { type: ControlType.Number, title: "Bottom (phone)", defaultValue: 44, min: 0, max: 160 },
     showLogo: { type: ControlType.Boolean, title: "Smiley", defaultValue: true },
 })
