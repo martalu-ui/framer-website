@@ -1655,7 +1655,7 @@ export default function WorkDesktop(props: Props) {
                         maxW={w}
                         maxH={h - top - 200}
                         cat={{ open: src(props.catOpen), half: src(props.catHalf), closed: src(props.catClosed) }}
-                        fishImgs={(props.fishImages || []).map((v) => sized(src(v), 400)).filter(Boolean)}
+                        fishImgs={(props.fishImages || []).map((v: any) => sized(src(v && v.image !== undefined ? v.image : v), 400)).filter(Boolean)}
                         onOpen={(i, el) => {
                             const r = el.getBoundingClientRect()
                             setOrigin({ x: r.left + r.width / 2, y: r.top + r.height / 2 })
@@ -1943,7 +1943,7 @@ addPropertyControls(WorkDesktop, {
     folderColor: { type: ControlType.Color, title: "Folder", defaultValue: "#141414" },
     catNoPupil: { type: ControlType.ResponsiveImage, title: "Cat · no pupils", description: "Optional: makes the cat follow the cursor with its eyes." },
     catHello: { type: ControlType.String, title: "Cat greeting" },
-    fishImages: { type: ControlType.Array, title: "Fish", control: { type: ControlType.ResponsiveImage }, description: "First ones are the resource fish, the rest swim around." },
+    fishImages: { type: ControlType.Array, title: "Fish", control: { type: ControlType.Object, controls: { image: { type: ControlType.ResponsiveImage, title: "Image" } } }, description: "First ones are the resource fish, the rest swim around." },
     showCat: { type: ControlType.Boolean, title: "Show cat", defaultValue: true },
     mode: { type: ControlType.Enum, title: "Mode", options: ["desktop", "sweeper", "fishing"], optionTitles: ["Desktop", "Minesweeper", "Fishing"], defaultValue: "desktop" },
     intro: { type: ControlType.Enum, title: "Intro", options: ["pop", "deal"], optionTitles: ["Pop in", "Cat deals the files"], defaultValue: "pop" },
