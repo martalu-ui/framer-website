@@ -1071,8 +1071,8 @@ function Fishing({
     maxH: number
     cat: { open: string; half: string; closed: string; noPupil?: string }
 }) {
-    const W = Math.round(Math.min(isPhone ? maxW - 64 : 640, maxW - 40))
-    const H = Math.round(Math.max(260, Math.min(isPhone ? 380 : 420, maxH)))
+    const W = Math.round(Math.min(isPhone ? maxW - 64 : 980, maxW * 0.8))
+    const H = Math.round(Math.max(260, Math.min(isPhone ? 380 : 440, maxH)))
     const n = items.length
     const pond = useRef<HTMLDivElement>(null)
     const fishEls = useRef<(HTMLDivElement | null)[]>([])
@@ -1224,7 +1224,7 @@ function Fishing({
         backgroundRepeat: "no-repeat",
     })
 
-    const catSize = isPhone ? 110 : 150
+    const catSize = isPhone ? 80 : 100
     const pondRect = pond.current?.getBoundingClientRect()
     const catLook = hookState && pondRect ? { x: pondRect.left + hookState.x, y: pondRect.top + hookState.y } : null
     return (
@@ -1732,12 +1732,12 @@ export default function WorkDesktop(props: Props) {
 
             {/* fishing mode */}
             {w > 0 && props.mode === "fishing" ? (
-                <div style={{ position: "absolute", left: "50%", top: top + (h - top) / 2 + (props.showCat !== false ? 50 : 0), transform: "translate(-50%, -50%)", zIndex: 3 }}>
+                <div style={{ position: "absolute", left: "50%", top: top + (h - top) / 2 + (props.showCat !== false ? 34 : 0), transform: "translate(-50%, -50%)", zIndex: 3 }}>
                     <Fishing
                         items={projects || []}
                         isPhone={isPhone}
                         maxW={w}
-                        maxH={h - top - 200 - (props.showCat !== false ? 110 : 0)}
+                        maxH={h - top - 200 - (props.showCat !== false ? 70 : 0)}
                         showCat={props.showCat !== false}
                         cat={{ open: src(props.catOpen), half: src(props.catHalf), closed: src(props.catClosed), noPupil: src(props.catNoPupil) || undefined }}
                         fishImgs={[props.fish1, props.fish2, props.fish3, props.fish4, props.fish5, props.fish6].map((v: any) => sized(src(v), 400)).filter(Boolean)}
