@@ -65,7 +65,12 @@ interface Props {
     intro: "pop" | "deal"
     mode: "desktop" | "sweeper" | "fishing"
     showCat: boolean
-    fishImages: any[]
+    fish1: any
+    fish2: any
+    fish3: any
+    fish4: any
+    fish5: any
+    fish6: any
     style?: React.CSSProperties
 }
 
@@ -1655,7 +1660,7 @@ export default function WorkDesktop(props: Props) {
                         maxW={w}
                         maxH={h - top - 200}
                         cat={{ open: src(props.catOpen), half: src(props.catHalf), closed: src(props.catClosed) }}
-                        fishImgs={(props.fishImages || []).map((v: any) => sized(src(v && v.image !== undefined ? v.image : v), 400)).filter(Boolean)}
+                        fishImgs={[props.fish1, props.fish2, props.fish3, props.fish4, props.fish5, props.fish6].map((v: any) => sized(src(v), 400)).filter(Boolean)}
                         onOpen={(i, el) => {
                             const r = el.getBoundingClientRect()
                             setOrigin({ x: r.left + r.width / 2, y: r.top + r.height / 2 })
@@ -1943,7 +1948,12 @@ addPropertyControls(WorkDesktop, {
     folderColor: { type: ControlType.Color, title: "Folder", defaultValue: "#141414" },
     catNoPupil: { type: ControlType.ResponsiveImage, title: "Cat · no pupils", description: "Optional: makes the cat follow the cursor with its eyes." },
     catHello: { type: ControlType.String, title: "Cat greeting" },
-    fishImages: { type: ControlType.Array, title: "Fish", control: { type: ControlType.Object, controls: { image: { type: ControlType.ResponsiveImage, title: "Image" } } }, description: "First ones are the resource fish, the rest swim around." },
+    fish1: { type: ControlType.ResponsiveImage, title: "Fish 1", description: "Fish 1-3 are the resource fish; the rest swim around." },
+    fish2: { type: ControlType.ResponsiveImage, title: "Fish 2" },
+    fish3: { type: ControlType.ResponsiveImage, title: "Fish 3" },
+    fish4: { type: ControlType.ResponsiveImage, title: "Fish 4" },
+    fish5: { type: ControlType.ResponsiveImage, title: "Fish 5" },
+    fish6: { type: ControlType.ResponsiveImage, title: "Fish 6" },
     showCat: { type: ControlType.Boolean, title: "Show cat", defaultValue: true },
     mode: { type: ControlType.Enum, title: "Mode", options: ["desktop", "sweeper", "fishing"], optionTitles: ["Desktop", "Minesweeper", "Fishing"], defaultValue: "desktop" },
     intro: { type: ControlType.Enum, title: "Intro", options: ["pop", "deal"], optionTitles: ["Pop in", "Cat deals the files"], defaultValue: "pop" },
