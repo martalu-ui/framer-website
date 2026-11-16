@@ -64,6 +64,7 @@ interface Props {
     catHello: string
     intro: "pop" | "deal"
     mode: "desktop" | "sweeper"
+    showCat: boolean
     style?: React.CSSProperties
 }
 
@@ -788,8 +789,10 @@ function Sweeper({
     isPhone,
     hello,
     maxCell = 44,
+    showCat = true,
 }: {
     maxCell?: number
+    showCat?: boolean
     items: Project[]
     onOpen: (i: number, el: HTMLElement) => void
     cat: { open: string; half: string; closed: string; noPupil?: string }
@@ -896,9 +899,11 @@ function Sweeper({
     return (
         <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center" }}>
             {/* the cat sits on top of the window */}
+            {showCat ? (
             <div style={{ position: "absolute", right: isPhone ? -6 : -28, top: -catSize * 0.83, zIndex: 3 }}>
                 <Cat open={cat.open} half={cat.half} closed={cat.closed} noPupil={cat.noPupil} size={catSize} look={look} say={say} bubble="right" />
             </div>
+            ) : null}
             <div
                 style={{
                     background: "#c0c0c0",
@@ -1313,9 +1318,10 @@ export default function WorkDesktop(props: Props) {
 
             {/* minesweeper mode */}
             {w > 0 && props.mode === "sweeper" ? (
-                <div style={{ position: "absolute", left: "50%", top: isPhone ? "56%" : top + 170 + (h - top - 170) / 2 - 20, transform: "translate(-50%, -50%)", zIndex: 3 }}>
+                <div style={{ position: "absolute", left: "50%", top: isPhone ? (props.showCat === false ? "50%" : "56%") : props.showCat === false ? top + (h - top) / 2 : top + 170 + (h - top - 170) / 2 - 20, transform: "translate(-50%, -50%)", zIndex: 3 }}>
                     <Sweeper
-                        maxCell={Math.max(30, Math.min(46, (h - top - 170 - 110 - 70) / 9))}
+                        showCat={props.showCat !== false}
+                        maxCell={Math.max(30, Math.min(46, (h - top - (props.showCat === false ? 30 : 170) - 110 - 70) / 9))}
                         items={projects || []}
                         isPhone={isPhone}
                         hello={props.catHello}
@@ -1588,6 +1594,7 @@ addPropertyControls(WorkDesktop, {
     folderColor: { type: ControlType.Color, title: "Folder", defaultValue: "#141414" },
     catNoPupil: { type: ControlType.ResponsiveImage, title: "Cat · no pupils", description: "Optional: makes the cat follow the cursor with its eyes." },
     catHello: { type: ControlType.String, title: "Cat greeting" },
+    showCat: { type: ControlType.Boolean, title: "Show cat", defaultValue: true },
     mode: { type: ControlType.Enum, title: "Mode", options: ["desktop", "sweeper"], optionTitles: ["Desktop", "Minesweeper"], defaultValue: "desktop" },
     intro: { type: ControlType.Enum, title: "Intro", options: ["pop", "deal"], optionTitles: ["Pop in", "Cat deals the files"], defaultValue: "pop" },
     topOffset: { type: ControlType.Number, title: "Top offset", defaultValue: 16, min: 0, max: 200, unit: "px" },
