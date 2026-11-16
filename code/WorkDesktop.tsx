@@ -1730,12 +1730,12 @@ export default function WorkDesktop(props: Props) {
 
             {/* fishing mode */}
             {w > 0 && props.mode === "fishing" ? (
-                <div style={{ position: "absolute", left: "50%", top: top + (h - top) / 2 + (props.showCat !== false ? 34 : 0), transform: "translate(-50%, -50%)", zIndex: 3 }}>
+                <div style={{ position: "absolute", left: "50%", top: top + (h - top - 72) / 2 + (props.showCat !== false ? 34 : 0), transform: "translate(-50%, -50%)", zIndex: 3 }}>
                     <Fishing
                         items={projects || []}
                         isPhone={isPhone}
                         maxW={w}
-                        maxH={h - top - 200 - (props.showCat !== false ? 70 : 0)}
+                        maxH={h - top - 272 - (props.showCat !== false ? 70 : 0)}
                         showCat={props.showCat !== false}
                         cat={{ open: src(props.catOpen), half: src(props.catHalf), closed: src(props.catClosed), noPupil: src(props.catNoPupil) || undefined }}
                         fishImgs={[props.fish1, props.fish2, props.fish3, props.fish4, props.fish5, props.fish6].map((v: any) => sized(src(v), 400)).filter(Boolean)}
