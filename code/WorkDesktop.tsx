@@ -1405,9 +1405,9 @@ function Fishing({
             <div style={{ marginTop: 30, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", justifyContent: "center", font: `500 14px/1.3 ${FONT}`, color: "#55524d", maxWidth: W + 40 }}>
                 {found.length === 0 ? (
                     <span>
-                        {n} resources are swimming in the pond — the shiny fish. Click the water to drop the hook.{" "}
+                        {n} resources are swimming in the pond: the shiny fish. Click the water to drop the hook.{" "}
                         <button onClick={showAll} style={{ all: "unset", cursor: "pointer", textDecoration: "underline", color: "#111" }}>
-                            Show me
+                            I don't want to play :(
                         </button>
                     </span>
                 ) : (
@@ -1425,7 +1425,7 @@ function Fishing({
                 )}
                 {found.length > 0 && found.length < n ? (
                     <button onClick={showAll} style={{ all: "unset", cursor: "pointer", textDecoration: "underline", color: "#111" }}>
-                        Show the rest
+                        I don't want to play :(
                     </button>
                 ) : null}
             </div>
@@ -1435,7 +1435,7 @@ function Fishing({
 
 // ---------- main ------------------------------------------------------------------------------
 /**
- * Work Desktop — projects as draggable folders and files around a blinking cat.
+ * Work Desktop: projects as draggable folders and files around a blinking cat.
  * @framerIntrinsicWidth 1440
  * @framerIntrinsicHeight 900
  * @framerSupportedLayoutWidth any-prefer-fixed
