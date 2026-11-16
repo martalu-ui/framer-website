@@ -1198,26 +1198,31 @@ function Fishing({
 
     return (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-            <div style={{ background: "#c0c0c0", padding: 6, boxShadow: `${bevel(false)}, 0 30px 70px rgba(30,25,20,.22)`, borderRadius: 4, userSelect: "none" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: 30, padding: "0 6px 0 8px", marginBottom: 6, background: "linear-gradient(90deg, #0004FA, #4d6bff)", color: "#fff", font: `700 14px/1 ${FONT}`, letterSpacing: ".02em" }}>
-                    <span>RESOURCES.pond</span>
-                    <span style={{ width: 20, height: 18, background: "#c0c0c0", boxShadow: bevel(false, 2), color: "#111", display: "flex", alignItems: "center", justifyContent: "center", font: `700 12px/1 ${FONT}` }}>×</span>
+            <div style={{ background: "#fff", borderRadius: 22, boxShadow: "0 0 0 10px rgba(255,255,255,.5), 0 0 0 11px rgba(0,0,0,.05), 0 40px 90px rgba(30,25,20,.18)", userSelect: "none", overflow: "hidden" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", height: 54, padding: "0 16px 0 20px", borderBottom: "1px solid rgba(0,0,0,.07)" }}>
+                    <div style={{ display: "flex", gap: 8 }}>
+                        {["#E5604F", "#E8B93A", "#5BC05E"].map((c) => (
+                            <span key={c} style={{ width: 13, height: 13, borderRadius: 99, background: c, boxShadow: "inset 0 0 0 .5px rgba(0,0,0,.2)" }} />
+                        ))}
+                    </div>
+                    <span style={{ font: `500 15px/1 ${FONT}`, color: "#111" }}>Resources pond</span>
+                    <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", alignItems: "center" }}>
+                        <span style={{ display: "flex", alignItems: "center", gap: 6, background: "#F2F1EE", borderRadius: 99, padding: "7px 11px", font: `600 13px/1 ${FONT}`, color: "#111", fontVariantNumeric: "tabular-nums" }}>
+                            <svg width="16" height="10" viewBox="0 0 100 60"><path d="M78 30 L100 12 L96 30 L100 48 Z" fill="#0004FA" /><ellipse cx="44" cy="30" rx="40" ry="22" fill="#0004FA" /></svg>
+                            {found.length}/{n}
+                        </span>
+                        <button
+                            onClick={reset}
+                            aria-label="New pond"
+                            title="New pond"
+                            className="wd-reset"
+                            style={{ all: "unset", cursor: "pointer", width: 32, height: 32, borderRadius: 99, background: "#F2F1EE", display: "flex", alignItems: "center", justifyContent: "center", color: "#111" }}
+                        >
+                            <svg width="15" height="15" viewBox="0 0 16 16"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2.5v3.6H9.9" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                        </button>
+                    </div>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: 6, marginBottom: 6, boxShadow: bevel(true, 2) }}>
-                    <Led n={n - found.length} />
-                    <button
-                        onClick={reset}
-                        onPointerDown={() => setPress(true)}
-                        onPointerUp={() => setPress(false)}
-                        onPointerLeave={() => setPress(false)}
-                        aria-label="New pond"
-                        title="New pond"
-                        style={{ all: "unset", cursor: "pointer", width: 38, height: 38, background: "#c0c0c0", boxShadow: bevel(press, 3), display: "flex", alignItems: "center", justifyContent: "center" }}
-                    >
-                        <span style={{ width: 30, height: 30, ...faceBg(found.length === n ? cat.closed : press ? cat.half : cat.open) }} />
-                    </button>
-                    <Led n={found.length} />
-                </div>
+                <div style={{ padding: 12 }}>
                 {/* the pond */}
                 <div
                     ref={pond}
@@ -1229,8 +1234,8 @@ function Fishing({
                         width: W,
                         height: H,
                         overflow: "hidden",
-                        boxShadow: bevel(true, 3),
-                        background: "linear-gradient(180deg, #9fd3ff 0%, #4f8ff7 38%, #1f4fd6 100%)",
+                        borderRadius: 14,
+                        background: "linear-gradient(180deg, #bfe3ff 0%, #6aa8ff 34%, #2a5cf0 78%, #1638c9 100%)",
                         cursor: "crosshair",
                         touchAction: "manipulation",
                     }}
@@ -1306,9 +1311,10 @@ function Fishing({
                         </div>
                     ) : null}
                 </div>
+                </div>
             </div>
             {/* caught tray */}
-            <div style={{ marginTop: 18, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", justifyContent: "center", font: `500 14px/1.3 ${FONT}`, color: "#55524d", maxWidth: W + 40 }}>
+            <div style={{ marginTop: 30, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", justifyContent: "center", font: `500 14px/1.3 ${FONT}`, color: "#55524d", maxWidth: W + 40 }}>
                 {found.length === 0 ? (
                     <span>
                         {n} resources are swimming in the pond — the shiny fish. Click the water to drop the hook.{" "}
@@ -1601,6 +1607,7 @@ export default function WorkDesktop(props: Props) {
 .wd-file { transition: transform .3s cubic-bezier(.2,.8,.2,1); }
 .wd-item:focus-visible { outline: none; }
 .wd-dot:hover { filter: brightness(.92); }
+.wd-reset:hover { background: #111 !important; color: #fff !important; }
 .wd-chip:hover { background: #111 !important; color: #fff !important; }
 .wd-cta:hover { text-decoration: underline !important; }
 .wd-scroll::-webkit-scrollbar { width: 8px } .wd-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,.12); border-radius: 8px }
