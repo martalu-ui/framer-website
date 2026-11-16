@@ -666,16 +666,7 @@ function Window({
                     ) : (
                     <>
                     {cover ? (
-                        <div
-                            style={{
-                                width: "100%",
-                                aspectRatio: "16 / 9",
-                                maxHeight: "48vh",
-                                borderRadius: 16,
-                                background: `#f2f1ee url("${cover}") center/cover no-repeat`,
-                                marginBottom: 22,
-                            }}
-                        />
+                        <img src={cover} alt="" style={{ display: "block", width: "100%", height: "auto", borderRadius: 16, background: "#f2f1ee", marginBottom: 22 }} />
                     ) : null}
                     <div style={{ font: `500 13px/1 ${FONT}`, letterSpacing: ".08em", textTransform: "uppercase", color: accent, marginBottom: 10 }}>
                         {p.brand}
@@ -716,12 +707,14 @@ function Window({
                     {p.approach || p.second ? (
                         <Section title="My approach">
                             <P t={p.approach} />
+                            {g1 ? <img src={g1} alt="" loading="lazy" style={{ display: "block", width: "100%", height: "auto", borderRadius: 14, margin: "6px 0 18px" }} /> : null}
                             <P t={p.second} />
                         </Section>
                     ) : null}
                     {p.decision ? (
                         <Section title="A key decision">
                             <P t={p.decision} />
+                            {g2 ? <img src={g2} alt="" loading="lazy" style={{ display: "block", width: "100%", height: "auto", borderRadius: 14, margin: "6px 0 12px" }} /> : null}
                         </Section>
                     ) : null}
                     {p.takeaway ? (
