@@ -90,7 +90,7 @@ const FONT = `"Inter", "Inter Placeholder", system-ui, -apple-system, sans-serif
 
 // Slots around the centre (fractions of the stage). Left column, right column, then fill.
 const SLOTS: [number, number][] = [
-    [0.6, 0.8], [0.23, 0.2], [0.91, 0.27], [0.77, 0.2],
+    [0.62, 0.75], [0.23, 0.2], [0.91, 0.27], [0.77, 0.2],
     [0.28, 0.5], [0.75, 0.58], [0.15, 0.8], [0.85, 0.8],
     [0.3, 0.84], [0.7, 0.84], [0.37, 0.18], [0.63, 0.18],
     [0.22, 0.5], [0.78, 0.5],
@@ -1505,6 +1505,8 @@ export default function WorkDesktop(props: Props) {
         const f = pos[k] || slotOf(k)
         const x = f.fx * w - itemW / 2
         let y = f.fy * h - itemH / 2
+        // default slots keep clear of the hint line and the floating menu at the bottom
+        if (!pos[k] && !isPhone) y = Math.min(y, h - itemH - 132)
         if (gravity && fall[k] !== undefined) y = fall[k]
         return { x: Math.max(4, Math.min(w - itemW - 4, x)), y: Math.max(top + 8, Math.min(h - itemH - 8, y)) }
     }
