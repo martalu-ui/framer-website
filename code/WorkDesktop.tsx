@@ -1868,30 +1868,27 @@ export default function WorkDesktop(props: Props) {
                 })
             ) : null}
 
-            {/* bottom bar: hint + gravity */}
+            {/* bottom bar: hint + gravity (minimal) */}
             {!isPhone && items.length > 0 && props.mode !== "sweeper" && props.mode !== "fishing" ? (
                 <div
                     style={{
                         position: "absolute",
                         left: "50%",
-                        bottom: 22,
+                        bottom: 24,
                         transform: "translateX(-50%)",
-                        background: ink,
-                        color: "#fff",
-                        borderRadius: 14,
-                        padding: "0 10px 0 24px",
-                        height: 56,
+                        color: ink,
                         display: "flex",
                         alignItems: "center",
-                        gap: 22,
-                        font: `600 16px/1 ${FONT}`,
-                        letterSpacing: ".02em",
+                        gap: 18,
+                        font: `500 12px/1 ${FONT}`,
+                        letterSpacing: ".08em",
+                        textTransform: "uppercase",
                         zIndex: 4,
                         whiteSpace: "nowrap",
                     }}
                 >
-                    <span style={{ font: `900 22px/1 ${FONT}`, letterSpacing: "-0.04em" }}>M.</span>
-                    {hint ? <span style={{ textTransform: "uppercase", opacity: 0.92 }}>{hint}</span> : null}
+                    {hint ? <span style={{ opacity: 0.45 }}>{hint}</span> : null}
+                    {hint ? <span style={{ width: 1, height: 12, background: ink, opacity: 0.18 }} /> : null}
                     <button
                         onClick={() => setGravity(!gravity)}
                         aria-pressed={gravity}
@@ -1900,17 +1897,14 @@ export default function WorkDesktop(props: Props) {
                             cursor: "pointer",
                             display: "flex",
                             alignItems: "center",
-                            gap: 10,
-                            height: 40,
-                            padding: "0 12px 0 14px",
-                            borderRadius: 10,
-                            background: "rgba(255,255,255,.1)",
-                            font: `500 15px/1 ${FONT}`,
+                            gap: 8,
+                            opacity: gravity ? 1 : 0.6,
+                            transition: "opacity .2s",
                         }}
                     >
                         Gravity
-                        <span style={{ width: 38, height: 22, borderRadius: 99, background: gravity ? accent : "rgba(255,255,255,.28)", position: "relative", transition: "background .2s" }}>
-                            <span style={{ position: "absolute", top: 3, left: gravity ? 19 : 3, width: 16, height: 16, borderRadius: 99, background: "#fff", transition: "left .2s" }} />
+                        <span style={{ width: 24, height: 14, borderRadius: 99, background: gravity ? ink : "transparent", boxShadow: `inset 0 0 0 1.5px ${ink}`, position: "relative", transition: "background .2s" }}>
+                            <span style={{ position: "absolute", top: 3, left: gravity ? 13 : 3, width: 8, height: 8, borderRadius: 99, background: gravity ? paper : ink, transition: "left .2s, background .2s" }} />
                         </span>
                     </button>
                 </div>
