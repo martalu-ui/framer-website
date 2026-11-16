@@ -17,7 +17,10 @@ const FH = 289
  */
 export default function CatLoader(props: any) {
     const { sprite, paper, ink, caption, size, delay, frameMs, preview } = props
-    const isCanvas = RenderTarget.current() === RenderTarget.canvas
+    const target = RenderTarget.current()
+    const isCanvas = target === RenderTarget.canvas
+    // only the live site / preview shows it, never screenshots, thumbnails or exports
+    const isLive = target === RenderTarget.preview
     const [phase, setPhase] = useState<"loading" | "leaving" | "gone">("loading")
 
     useEffect(() => {
@@ -51,6 +54,7 @@ export default function CatLoader(props: any) {
         )
     }
     if (phase === "gone") return null
+    if (!isCanvas && !isLive) return null
 
     const src = sprite?.src || "https://raw.githubusercontent.com/martalu-ui/framer-website/portfolio-assets/portfolio/cat-yarn-sprite.webp"
     const w = size
