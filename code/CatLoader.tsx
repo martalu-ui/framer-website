@@ -43,7 +43,7 @@ export default function CatLoader(props: any) {
             const total = imgs.length
             const ready = imgs.filter((i) => i.complete).length
             const real = total ? ready / total : 0
-            const creep = 1 - Math.exp(-(performance.now() - t0) / 2200)
+            const creep = 1 - Math.exp(-Math.max(0, performance.now() - t0 - delay) / 4000)
             const goal = finished.current ? 1 : Math.min(0.94, Math.max(real * 0.94, creep * 0.9))
             progress.current += (goal - progress.current) * (finished.current ? 0.35 : 0.18)
             setPct(progress.current)
