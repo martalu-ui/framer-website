@@ -68,7 +68,7 @@ export default function CatLoader(props: any) {
             }, wait)
         }
         window.addEventListener("load", finish, { once: true })
-        const safety = window.setTimeout(finish, 10000)
+        const safety = window.setTimeout(finish, delay + 20000)
         return () => {
             window.removeEventListener("load", finish)
             window.clearTimeout(safety)
@@ -159,7 +159,7 @@ CatLoader.defaultProps = {
     caption: "Untangling the yarn",
     size: 110,
     barWidth: 260,
-    delay: 900,
+    delay: 10000,
     minVisible: 1200,
     frameMs: 170,
     showCat: true,
@@ -173,7 +173,7 @@ addPropertyControls(CatLoader, {
     size: { type: ControlType.Number, title: "Cat width", defaultValue: 110, min: 50, max: 400, step: 10 },
     barWidth: { type: ControlType.Number, title: "Bar width", defaultValue: 260, min: 120, max: 600, step: 10 },
     bar: { type: ControlType.Color, title: "Bar", defaultValue: "#F2B01E" },
-    delay: { type: ControlType.Number, title: "Show after (ms)", defaultValue: 900, min: 0, max: 3000, step: 50 },
+    delay: { type: ControlType.Number, title: "Show after (ms)", defaultValue: 10000, min: 0, max: 30000, step: 500 },
     minVisible: { type: ControlType.Number, title: "Min visible (ms)", defaultValue: 1200, min: 0, max: 4000, step: 100 },
     frameMs: { type: ControlType.Number, title: "Frame (ms)", defaultValue: 170, min: 60, max: 600, step: 10 },
     paper: { type: ControlType.Color, title: "Background", defaultValue: "#ECEBE8" },
