@@ -57,7 +57,10 @@ export default function PhotoParallax(props: any) {
         const rot = [-7, 5, -3, 8, -5, 3][i % 6]
         const scale = [1, 0.8, 0.92, 0.75, 0.88, 1.05][i % 6]
         const right = bothSides && i % 2 === 1
-        const sticker = stickers.length ? stickers[i % stickers.length] : ""
+        // only some photos get a sticker: 1st, 4th and 5th (then repeats)
+        const STICKER_AT = [0, 3, 4]
+        const slot = STICKER_AT.indexOf(i % 6)
+        const sticker = stickers.length && slot >= 0 ? stickers[slot % stickers.length] : ""
         const srot = [14, -12, 8, -16, 10, -8][i % 6]
         return { src: photos[i % photos.length], top, zig, factor, rot, scale, right, sticker, srot }
     })
