@@ -91,7 +91,7 @@ const FONT = `"Inter", "Inter Placeholder", system-ui, -apple-system, sans-serif
 // Slots around the centre (fractions of the stage). Left column, right column, then fill.
 const SLOTS: [number, number][] = [
     [0.09, 0.27], [0.23, 0.2], [0.91, 0.27], [0.77, 0.2],
-    [0.08, 0.55], [0.92, 0.55], [0.15, 0.8], [0.85, 0.8],
+    [0.28, 0.5], [0.75, 0.58], [0.15, 0.8], [0.85, 0.8],
     [0.3, 0.84], [0.7, 0.84], [0.37, 0.18], [0.63, 0.18],
     [0.22, 0.5], [0.78, 0.5],
 ]
