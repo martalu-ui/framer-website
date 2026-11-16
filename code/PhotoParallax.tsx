@@ -3,6 +3,13 @@ import { useEffect, useRef, useState } from "react"
 import { addPropertyControls, ControlType, RenderTarget } from "framer"
 
 const RAW = "https://raw.githubusercontent.com/martalu-ui/framer-website/portfolio-assets/portfolio/me/"
+const CORNERS: React.CSSProperties[] = [
+    { top: "-14%", right: "-22%" },
+    { bottom: "-12%", left: "-24%" },
+    { top: "-16%", left: "-20%" },
+    { bottom: "-14%", right: "-22%" },
+]
+const STICKERS = ["star", "strawberry", "duck"].map((n) => `https://raw.githubusercontent.com/martalu-ui/framer-website/portfolio-assets/portfolio/stickers/${n}.png`)
 const FALLBACK = ["me-laugh.jpg", "me-beach.jpg", "me-dinner.jpg", "me-watermelon.jpg"].map((f) => RAW + f)
 
 /**
@@ -14,13 +21,16 @@ const FALLBACK = ["me-laugh.jpg", "me-beach.jpg", "me-dinner.jpg", "me-watermelo
  * @framerSupportedLayoutHeight any
  */
 export default function PhotoParallax(props: any) {
-    const { laneStart, laneEnd, rightStart, rightEnd, bothSides, gap, size, strength, radius, startAt, endAt, minWidth, repeat, style } = props
+    const { stickerSize, showStickers, laneStart, laneEnd, rightStart, rightEnd, bothSides, gap, size, strength, radius, startAt, endAt, minWidth, repeat, style } = props
     const isCanvas = RenderTarget.current() === RenderTarget.canvas
     const srcs: string[] = [props.photo1, props.photo2, props.photo3, props.photo4, props.photo5, props.photo6]
         .map((p: any) => p?.src)
         .filter(Boolean)
     const photos = srcs.length ? srcs : FALLBACK
 
+    const stSrcs: string[] = [props.sticker1, props.sticker2, props.sticker3].map((p: any) => p?.src).filter(Boolean)
+    const stickers = showStickers ? (stSrcs.length ? stSrcs : STICKERS) : []
+    const stEls = useRef<(HTMLImageElement | null)[]>([])
     const root = useRef<HTMLDivElement>(null)
     const els = useRef<(HTMLDivElement | null)[]>([])
     const [box, setBox] = useState({ w: 0, h: 0 })
@@ -47,7 +57,9 @@ export default function PhotoParallax(props: any) {
         const rot = [-7, 5, -3, 8, -5, 3][i % 6]
         const scale = [1, 0.8, 0.92, 0.75, 0.88, 1.05][i % 6]
         const right = bothSides && i % 2 === 1
-        return { src: photos[i % photos.length], top, zig, factor, rot, scale, right }
+        const sticker = stickers.length ? stickers[i % stickers.length] : ""
+        const srot = [14, -12, 8, -16, 10, -8][i % 6]
+        return { src: photos[i % photos.length], top, zig, factor, rot, scale, right, sticker, srot }
     })
 
     useEffect(() => {
@@ -72,6 +84,14 @@ export default function PhotoParallax(props: any) {
                 const s = it.scale * (0.7 + 0.3 * o)
                 el.style.transform = `translate3d(0, ${y.toFixed(1)}px, 0) rotate(${(it.rot * (1.6 - 0.6 * o)).toFixed(2)}deg) scale(${s.toFixed(3)})`
                 el.style.opacity = o.toFixed(3)
+                const st = stEls.current[i]
+                if (st) {
+                    // sticker pops on (with a little overshoot) once the photo is mostly in
+                    const k = Math.min(1, Math.max(0, (o - 0.55) / 0.45))
+                    const c = 1.70158
+                    const pop = k === 0 ? 0 : 1 + (c + 1) * Math.pow(k - 1, 3) + c * Math.pow(k - 1, 2)
+                    st.style.transform = `rotate(${(it.srot - (1 - k) * 25).toFixed(1)}deg) scale(${pop.toFixed(3)})`
+                }
             })
         }
         const on = () => {
@@ -106,18 +126,45 @@ export default function PhotoParallax(props: any) {
                                       els.current[i] = el
                                   }}
                                   style={{
+                                      position: "relative",
                                       width: "100%",
                                       height: "100%",
-                                      borderRadius: radius,
-                                      overflow: "hidden",
-                                      boxShadow: "0 14px 30px -12px rgba(0,0,0,.35), 0 2px 6px rgba(0,0,0,.08)",
                                       transform: isCanvas ? `rotate(${it.rot}deg) scale(${it.scale})` : undefined,
                                       opacity: isCanvas ? 1 : 0,
                                       willChange: "transform, opacity",
-                                      background: "#ddd",
                                   }}
                               >
-                                  <img src={it.src} alt="" loading="lazy" draggable={false} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                                  <div
+                                      style={{
+                                          width: "100%",
+                                          height: "100%",
+                                          borderRadius: radius,
+                                          overflow: "hidden",
+                                          boxShadow: "0 14px 30px -12px rgba(0,0,0,.35), 0 2px 6px rgba(0,0,0,.08)",
+                                          background: "#ddd",
+                                      }}
+                                  >
+                                      <img src={it.src} alt="" loading="lazy" draggable={false} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                                  </div>
+                                  {it.sticker ? (
+                                      <img
+                                          ref={(el) => {
+                                              stEls.current[i] = el
+                                          }}
+                                          src={it.sticker}
+                                          alt=""
+                                          draggable={false}
+                                          style={{
+                                              position: "absolute",
+                                              width: w * stickerSize,
+                                              height: "auto",
+                                              ...CORNERS[i % CORNERS.length],
+                                              transform: isCanvas ? `rotate(${it.srot}deg)` : "scale(0)",
+                                              filter: "drop-shadow(0 6px 10px rgba(0,0,0,.18))",
+                                              willChange: "transform",
+                                          }}
+                                      />
+                                  ) : null}
                               </div>
                           </div>
                       )
@@ -138,6 +185,8 @@ PhotoParallax.defaultProps = {
     minWidth: 1000,
     repeat: 1,
     gap: 850,
+    showStickers: true,
+    stickerSize: 0.42,
     bothSides: true,
     rightStart: 80,
     rightEnd: 97,
@@ -151,6 +200,11 @@ addPropertyControls(PhotoParallax, {
     photo4: { type: ControlType.ResponsiveImage, title: "Photo 4" },
     photo5: { type: ControlType.ResponsiveImage, title: "Photo 5" },
     photo6: { type: ControlType.ResponsiveImage, title: "Photo 6" },
+    showStickers: { type: ControlType.Boolean, title: "Stickers", defaultValue: true },
+    sticker1: { type: ControlType.ResponsiveImage, title: "Sticker 1", hidden: (p: any) => !p.showStickers },
+    sticker2: { type: ControlType.ResponsiveImage, title: "Sticker 2", hidden: (p: any) => !p.showStickers },
+    sticker3: { type: ControlType.ResponsiveImage, title: "Sticker 3", hidden: (p: any) => !p.showStickers },
+    stickerSize: { type: ControlType.Number, title: "Sticker size", defaultValue: 0.42, min: 0.15, max: 1, step: 0.01, hidden: (p: any) => !p.showStickers },
     size: { type: ControlType.Number, title: "Photo width", defaultValue: 150, min: 60, max: 400, step: 5 },
     strength: { type: ControlType.Number, title: "Parallax", defaultValue: 1, min: 0, max: 3, step: 0.1 },
     laneStart: { type: ControlType.Number, title: "Lane from %", defaultValue: 3, min: 0, max: 100, step: 1 },
