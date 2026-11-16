@@ -16,7 +16,7 @@ const FH = 289
  * @framerSupportedLayoutHeight any
  */
 export default function CatLoader(props: any) {
-    const { sprite, paper, ink, caption, size, delay, frameMs, preview } = props
+    const { sprite, paper, ink, caption, size, delay, frameMs, preview, minVisible } = props
     const target = RenderTarget.current()
     const isCanvas = target === RenderTarget.canvas
     // only the live site / preview shows it, never screenshots, thumbnails or exports
@@ -25,22 +25,36 @@ export default function CatLoader(props: any) {
 
     useEffect(() => {
         if (isCanvas) return
+        // Already loaded (fast load or in-site navigation): never show it.
+        if (document.readyState === "complete") {
+            setPhase("gone")
+            return
+        }
         let done = false
+        let timer = 0
         const finish = () => {
             if (done) return
             done = true
-            setPhase("leaving")
-            window.setTimeout(() => setPhase("gone"), 450)
-        }
-        if (document.readyState === "complete") {
-            finish()
-            return
+            const t = performance.now()
+            if (t < delay + 50) {
+                // still inside the invisible grace period: skip it entirely, no flash
+                setPhase("gone")
+                return
+            }
+            // it has been on screen: keep it long enough to read as intentional
+            const visibleFor = t - delay
+            const wait = Math.max(0, minVisible - visibleFor)
+            timer = window.setTimeout(() => {
+                setPhase("leaving")
+                timer = window.setTimeout(() => setPhase("gone"), 450)
+            }, wait)
         }
         window.addEventListener("load", finish, { once: true })
         const safety = window.setTimeout(finish, 10000)
         return () => {
             window.removeEventListener("load", finish)
             window.clearTimeout(safety)
+            window.clearTimeout(timer)
         }
     }, [isCanvas])
 
@@ -113,7 +127,8 @@ CatLoader.defaultProps = {
     ink: "#111111",
     caption: "Untangling the yarn",
     size: 200,
-    delay: 300,
+    delay: 900,
+    minVisible: 1200,
     frameMs: 170,
     preview: false,
 }
@@ -122,7 +137,8 @@ addPropertyControls(CatLoader, {
     sprite: { type: ControlType.ResponsiveImage, title: "Sprite (6 frames)" },
     caption: { type: ControlType.String, title: "Caption", defaultValue: "Untangling the yarn" },
     size: { type: ControlType.Number, title: "Cat width", defaultValue: 200, min: 80, max: 500, step: 10 },
-    delay: { type: ControlType.Number, title: "Show after (ms)", defaultValue: 300, min: 0, max: 3000, step: 50 },
+    delay: { type: ControlType.Number, title: "Show after (ms)", defaultValue: 900, min: 0, max: 3000, step: 50 },
+    minVisible: { type: ControlType.Number, title: "Min visible (ms)", defaultValue: 1200, min: 0, max: 4000, step: 100 },
     frameMs: { type: ControlType.Number, title: "Frame (ms)", defaultValue: 170, min: 60, max: 600, step: 10 },
     paper: { type: ControlType.Color, title: "Background", defaultValue: "#ECEBE8" },
     ink: { type: ControlType.Color, title: "Ink", defaultValue: "#111111" },
