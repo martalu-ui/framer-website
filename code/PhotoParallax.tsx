@@ -143,15 +143,14 @@ PhotoParallax.defaultProps = {
     rightEnd: 97,
 }
 
-const img = (title: string) => ({ type: ControlType.ResponsiveImage, title })
 
 addPropertyControls(PhotoParallax, {
-    photo1: img("Photo 1"),
-    photo2: img("Photo 2"),
-    photo3: img("Photo 3"),
-    photo4: img("Photo 4"),
-    photo5: img("Photo 5"),
-    photo6: img("Photo 6"),
+    photo1: { type: ControlType.ResponsiveImage, title: "Photo 1" },
+    photo2: { type: ControlType.ResponsiveImage, title: "Photo 2" },
+    photo3: { type: ControlType.ResponsiveImage, title: "Photo 3" },
+    photo4: { type: ControlType.ResponsiveImage, title: "Photo 4" },
+    photo5: { type: ControlType.ResponsiveImage, title: "Photo 5" },
+    photo6: { type: ControlType.ResponsiveImage, title: "Photo 6" },
     size: { type: ControlType.Number, title: "Photo width", defaultValue: 150, min: 60, max: 400, step: 5 },
     strength: { type: ControlType.Number, title: "Parallax", defaultValue: 1, min: 0, max: 3, step: 0.1 },
     laneStart: { type: ControlType.Number, title: "Lane from %", defaultValue: 3, min: 0, max: 100, step: 1 },
