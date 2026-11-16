@@ -14,7 +14,7 @@ const FALLBACK = ["me-laugh.jpg", "me-beach.jpg", "me-dinner.jpg", "me-watermelo
  * @framerSupportedLayoutHeight any
  */
 export default function PhotoParallax(props: any) {
-    const { laneStart, laneEnd, size, strength, radius, startAt, endAt, minWidth, repeat, style } = props
+    const { laneStart, laneEnd, rightStart, rightEnd, bothSides, gap, size, strength, radius, startAt, endAt, minWidth, repeat, style } = props
     const isCanvas = RenderTarget.current() === RenderTarget.canvas
     const srcs: string[] = [props.photo1, props.photo2, props.photo3, props.photo4, props.photo5, props.photo6]
         .map((p: any) => p?.src)
@@ -36,8 +36,9 @@ export default function PhotoParallax(props: any) {
 
     const hidden = box.w > 0 && box.w < minWidth
 
-    // how many photos fit along the section
-    const count = Math.max(photos.length, Math.min(photos.length * repeat, Math.floor(box.h / (size * 2.1)) || photos.length))
+    // one photo every `gap` px along the section
+    const span = (box.h * (endAt - startAt)) / 100
+    const count = Math.max(1, Math.min(photos.length * repeat, Math.floor(span / gap) + 1 || photos.length))
     const items = Array.from({ length: count }, (_, i) => {
         const t = count === 1 ? 0.5 : i / (count - 1)
         const top = startAt + t * (endAt - startAt)
@@ -45,7 +46,8 @@ export default function PhotoParallax(props: any) {
         const factor = [0.35, 0.6, 0.25, 0.5, 0.7, 0.3][i % 6] * strength
         const rot = [-7, 5, -3, 8, -5, 3][i % 6]
         const scale = [1, 0.8, 0.92, 0.75, 0.88, 1.05][i % 6]
-        return { src: photos[i % photos.length], top, zig, factor, rot, scale }
+        const right = bothSides && i % 2 === 1
+        return { src: photos[i % photos.length], top, zig, factor, rot, scale, right }
     })
 
     useEffect(() => {
@@ -85,7 +87,8 @@ export default function PhotoParallax(props: any) {
         }
     }, [isCanvas, hidden, box.w, box.h, count, strength])
 
-    const laneW = Math.max(0, (laneEnd - laneStart) / 100) * box.w
+    const laneL = Math.max(0, (laneEnd - laneStart) / 100) * box.w
+    const laneR = Math.max(0, (rightEnd - rightStart) / 100) * box.w
     const w = size
     const h = Math.round(size * 1.25)
 
@@ -93,7 +96,9 @@ export default function PhotoParallax(props: any) {
         <div ref={root} style={{ ...style, position: "relative", width: "100%", height: "100%", pointerEvents: "none", overflow: "visible" }}>
             {!hidden && box.w
                 ? items.map((it, i) => {
-                      const left = (laneStart / 100) * box.w + it.zig * Math.max(0, laneW - w * it.scale)
+                      const left = it.right
+                          ? (rightStart / 100) * box.w + it.zig * Math.max(0, laneR - w * it.scale)
+                          : (laneStart / 100) * box.w + it.zig * Math.max(0, laneL - w * it.scale)
                       return (
                           <div key={i} style={{ position: "absolute", left, top: `${it.top}%`, width: w, height: h }}>
                               <div
@@ -131,7 +136,11 @@ PhotoParallax.defaultProps = {
     startAt: 14,
     endAt: 88,
     minWidth: 1000,
-    repeat: 2,
+    repeat: 1,
+    gap: 850,
+    bothSides: true,
+    rightStart: 80,
+    rightEnd: 97,
 }
 
 const img = (title: string) => ({ type: ControlType.ResponsiveImage, title })
@@ -149,7 +158,11 @@ addPropertyControls(PhotoParallax, {
     laneEnd: { type: ControlType.Number, title: "Lane to %", defaultValue: 31, min: 0, max: 100, step: 1 },
     startAt: { type: ControlType.Number, title: "Start at %", defaultValue: 14, min: 0, max: 100, step: 1 },
     endAt: { type: ControlType.Number, title: "End at %", defaultValue: 88, min: 0, max: 100, step: 1 },
-    repeat: { type: ControlType.Number, title: "Max repeats", defaultValue: 2, min: 1, max: 4, step: 1 },
+    repeat: { type: ControlType.Number, title: "Max repeats", defaultValue: 1, min: 1, max: 4, step: 1 },
+    gap: { type: ControlType.Number, title: "Gap px", defaultValue: 850, min: 150, max: 2000, step: 10 },
+    bothSides: { type: ControlType.Boolean, title: "Both sides", defaultValue: true },
+    rightStart: { type: ControlType.Number, title: "Right from %", defaultValue: 80, min: 0, max: 100, step: 1, hidden: (p: any) => !p.bothSides },
+    rightEnd: { type: ControlType.Number, title: "Right to %", defaultValue: 97, min: 0, max: 100, step: 1, hidden: (p: any) => !p.bothSides },
     radius: { type: ControlType.Number, title: "Radius", defaultValue: 14, min: 0, max: 40 },
     minWidth: { type: ControlType.Number, title: "Hide below px", defaultValue: 1000, min: 0, max: 2000, step: 10 },
 })
