@@ -65,6 +65,8 @@ interface Props {
     intro: "pop" | "deal"
     mode: "desktop" | "sweeper" | "fishing"
     showCat: boolean
+    catLines: string
+    catTop: number
     fish1: any
     fish2: any
     fish3: any
@@ -1448,7 +1450,10 @@ export default function WorkDesktop(props: Props) {
     const [hoverK, setHoverK] = useState<number | null>(null)
     const [lookAt, setLookAt] = useState<{ x: number; y: number } | null>(null)
     const [hello, setHello] = useState(true)
+    const lines = (props.catLines || "").split("|").map((x) => x.trim()).filter(Boolean)
+    const [lineIdx, setLineIdx] = useState(0)
     useEffect(() => {
+        if (lines.length) return
         const t = setTimeout(() => setHello(false), 4200)
         return () => clearTimeout(t)
     }, [])
@@ -1655,7 +1660,7 @@ export default function WorkDesktop(props: Props) {
         if (!it) return ""
         return it.kind === "project" ? projects[it.i].say || "" : extras[it.i].say || ""
     }
-    const catSay = hoverK !== null && sayFor(hoverK) ? sayFor(hoverK) : hello && dealDone && props.catHello ? props.catHello : ""
+    const catSay = hoverK !== null && sayFor(hoverK) ? sayFor(hoverK) : lines.length ? lines[lineIdx % lines.length] : hello && dealDone && props.catHello ? props.catHello : ""
 
     return (
         <div
@@ -1707,7 +1712,7 @@ export default function WorkDesktop(props: Props) {
                         position: "absolute",
                         left: 0,
                         right: 0,
-                        top: "50%",
+                        top: props.catTop ? `${props.catTop - 2}%` : "50%",
                         transform: "translateY(-50%)",
                         textAlign: "center",
                         font: `900 ${isPhone ? Math.min(w * 0.3, (w * 0.94) / (0.66 * word.length)) : Math.min(w * 0.24, (w * 0.86) / (0.66 * word.length), h * 0.42)}px/0.8 ${FONT}`,
@@ -1716,7 +1721,7 @@ export default function WorkDesktop(props: Props) {
                         opacity: props.mode === "sweeper" ? 0.1 : 1,
                         userSelect: "none",
                         pointerEvents: "none",
-                        marginTop: isPhone ? -h * 0.22 : 0,
+                        marginTop: isPhone && !props.catTop ? -h * 0.22 : 0,
                     }}
                 >
                     {word}
@@ -1765,10 +1770,12 @@ export default function WorkDesktop(props: Props) {
             {/* cat */}
             {w > 0 && props.mode !== "sweeper" && props.mode !== "fishing" ? (
             <div
+                onClick={() => lines.length && setLineIdx((i) => i + 1)}
                 style={{
+                    cursor: lines.length ? "pointer" : "default",
                     position: "absolute",
                     left: "50%",
-                    top: isPhone ? "28%" : "52%",
+                    top: props.catTop ? `${props.catTop}%` : isPhone ? "28%" : "52%",
                     transform: "translate(-50%, -50%)",
                     zIndex: 2,
                 }}
@@ -1862,7 +1869,7 @@ export default function WorkDesktop(props: Props) {
             ) : null}
 
             {/* bottom bar: hint + gravity */}
-            {!isPhone && props.mode !== "sweeper" && props.mode !== "fishing" ? (
+            {!isPhone && items.length > 0 && props.mode !== "sweeper" && props.mode !== "fishing" ? (
                 <div
                     style={{
                         position: "absolute",
@@ -2027,6 +2034,8 @@ addPropertyControls(WorkDesktop, {
     fish4: { type: ControlType.ResponsiveImage, title: "Fish 4" },
     fish5: { type: ControlType.ResponsiveImage, title: "Fish 5" },
     fish6: { type: ControlType.ResponsiveImage, title: "Fish 6" },
+    catLines: { type: ControlType.String, title: "Cat lines", description: "Separate with |. Click the cat to cycle." },
+    catTop: { type: ControlType.Number, title: "Cat top %", defaultValue: 0, min: 0, max: 100 },
     showCat: { type: ControlType.Boolean, title: "Show cat", defaultValue: true },
     mode: { type: ControlType.Enum, title: "Mode", options: ["desktop", "sweeper", "fishing"], optionTitles: ["Desktop", "Minesweeper", "Fishing"], defaultValue: "desktop" },
     intro: { type: ControlType.Enum, title: "Intro", options: ["pop", "deal"], optionTitles: ["Pop in", "Cat deals the files"], defaultValue: "pop" },
