@@ -728,7 +728,8 @@ function Window({
                     )}
                 </div>
 
-                {/* footer */}
+                {/* footer: only for folders or items with their own call to action (no case study links for now) */}
+                {folder || p.cta ? (
                 <div
                     style={{
                         flex: "0 0 auto",
@@ -742,7 +743,7 @@ function Window({
                     }}
                 >
                     <span style={{ font: `500 16px/1.2 ${FONT}`, color: "#111" }}>
-                        {folder ? `${folder.items.length} ${folder.items.length === 1 ? "item" : "items"}` : p.cta || "Read the full case study"}
+                        {folder ? `${folder.items.length} ${folder.items.length === 1 ? "item" : "items"}` : p.cta}
                     </span>
                     {href && !folder ? (
                         <a
@@ -759,6 +760,7 @@ function Window({
                         </a>
                     ) : null}
                 </div>
+                ) : null}
             </div>
             </div>
         </div>
